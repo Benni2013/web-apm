@@ -1,43 +1,400 @@
-<h2>Scan/Pengenalan Wajah Otomatis dari Kamera</h2>
-<video id="video" width="320" height="240" autoplay></video>
-<canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
-<p id="result"><i>Memulai kamera...</i></p>
-<p><a href="{{ url_for('home') }}">Kembali ke Home</a></p>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Wajah - Sistem Absensi Lab</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .scan-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .scan-header {
+            margin-bottom: 30px;
+        }
+        
+        .scan-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        
+        .scan-header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .camera-section {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        #video {
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 100%;
+            height: auto;
+        }
+        
+        #canvas {
+            display: none;
+        }
+        
+        .status-section {
+            margin: 30px 0;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-weight: 500;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+        
+        .status-scanning {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .status-success {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .status-error {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+        
+        .status-warning {
+            background: linear-gradient(45deg, #ffa726, #fb8c00);
+            color: white;
+        }
+        
+        .loading-animation {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .scan-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .scan-info h4 {
+            color: #1976D2;
+            margin-bottom: 8px;
+        }
+        
+        .scan-info ul {
+            color: #424242;
+            margin-left: 20px;
+        }
+        
+        .scan-info li {
+            margin-bottom: 5px;
+        }
+        
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        @media (max-width: 768px) {
+            .scan-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .scan-header h1 {
+                font-size: 1.8em;
+            }
+            
+            #video {
+                width: 100%;
+                max-width: 320px;
+            }
+        }
+        
+        /* Success Popup Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 40px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .success-icon {
+            font-size: 4em;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        
+        .modal h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+        
+        .modal p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .modal-button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="scan-container">
+        <div class="scan-header">
+            <h1><i class="fas fa-camera"></i> Scan Wajah untuk Absensi</h1>
+            <p>Posisikan wajah Anda di depan kamera</p>
+        </div>
+        
+        <div class="camera-section">
+            <video id="video" width="400" height="300" autoplay></video>
+            <canvas id="canvas" width="400" height="300"></canvas>
+        </div>
+        
+        <div class="status-section">
+            <div id="status" class="status-indicator status-scanning">
+                <div class="loading-animation"></div>
+                <span>Memulai kamera...</span>
+            </div>
+        </div>
+        
+        <div class="scan-info">
+            <h4><i class="fas fa-info-circle"></i> Petunjuk Penggunaan:</h4>
+            <ul>
+                <li>Pastikan wajah Anda terlihat jelas di kamera</li>
+                <li>Posisikan wajah di tengah frame kamera</li>
+                <li>Hindari cahaya yang terlalu terang atau gelap</li>
+                <li>Sistem akan mendeteksi wajah secara otomatis setiap 2 detik</li>
+            </ul>
+        </div>
+        
+        <a href="{{ url_for('home') }}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Kembali ke Dashboard
+        </a>
+    </div>
+    
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2>Absensi Berhasil!</h2>
+            <p id="successMessage">Selamat datang!</p>
+            <button class="modal-button" onclick="redirectToHome()">
+                <i class="fas fa-home"></i> Ke Dashboard
+            </button>
+        </div>
+    </div>
 
-<script>
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const result = document.getElementById('result');
-let scanning = true;
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const status = document.getElementById('status');
+        const successModal = document.getElementById('successModal');
+        const successMessage = document.getElementById('successMessage');
+        let scanning = true;
+        let scanInterval;
 
-// Start webcam
-navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => { video.srcObject = stream; })
-    .catch(err => { result.innerText = "Kamera tidak tersedia!"; scanning = false; });
+        // Start webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                updateStatus('scanning', 'Kamera aktif - Menunggu deteksi wajah...');
+                // Mulai scanning setelah 2 detik
+                setTimeout(() => {
+                    autoScan();
+                    scanInterval = setInterval(autoScan, 2000);
+                }, 2000);
+            })
+            .catch(err => {
+                updateStatus('error', 'Kamera tidak tersedia!');
+                scanning = false;
+            });
 
-function autoScan() {
-    if (!scanning) return;
-    canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
-    let dataURL = canvas.toDataURL('image/jpeg', 0.95);
+        function updateStatus(type, message) {
+            status.className = `status-indicator status-${type}`;
+            
+            let icon = '';
+            switch(type) {
+                case 'scanning':
+                    icon = '<div class="loading-animation"></div>';
+                    break;
+                case 'success':
+                    icon = '<i class="fas fa-check-circle"></i>';
+                    break;
+                case 'error':
+                    icon = '<i class="fas fa-times-circle"></i>';
+                    break;
+                case 'warning':
+                    icon = '<i class="fas fa-exclamation-triangle"></i>';
+                    break;
+            }
+            
+            status.innerHTML = `${icon}<span>${message}</span>`;
+        }
 
-    let formData = new FormData();
-    formData.append('webcam_image', dataURL);
+        function autoScan() {
+            if (!scanning) return;
+            
+            canvas.getContext('2d').drawImage(video, 0, 0, 400, 300);
+            let dataURL = canvas.toDataURL('image/jpeg', 0.95);
 
-    fetch('{{ url_for("scan_auto") }}', {
-        method: 'POST',
-        body: formData
-    })
-    .then(resp => resp.json())
-    .then(data => {
-        result.innerHTML = "<b>" + data.result + "</b>";
-        setTimeout(autoScan, 2000); // Ulangi setiap 2 detik (bisa disesuaikan)
-    })
-    .catch(err => {
-        result.innerHTML = "Gagal scan";
-        setTimeout(autoScan, 2000);
-    });
-}
+            let formData = new FormData();
+            formData.append('webcam_image', dataURL);
 
-// Mulai autoscan setelah 2 detik kamera aktif
-setTimeout(autoScan, 2000);
-</script>
+            updateStatus('scanning', 'Memproses deteksi wajah...');
+
+            fetch('{{ url_for("scan_auto") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    // Stop scanning
+                    scanning = false;
+                    clearInterval(scanInterval);
+                    
+                    // Update status
+                    updateStatus('success', `Berhasil! ${data.message}`);
+                    
+                    // Show success modal
+                    successMessage.textContent = data.message;
+                    successModal.style.display = 'block';
+                    
+                    // Stop camera
+                    if (video.srcObject) {
+                        video.srcObject.getTracks().forEach(track => track.stop());
+                    }
+                } else {
+                    updateStatus('warning', data.message);
+                    // Continue scanning after 2 seconds
+                    setTimeout(() => {
+                        if (scanning) {
+                            updateStatus('scanning', 'Mencari wajah...');
+                        }
+                    }, 2000);
+                }
+            })
+            .catch(err => {
+                updateStatus('error', 'Gagal memproses - mencoba lagi...');
+                setTimeout(() => {
+                    if (scanning) {
+                        updateStatus('scanning', 'Mencari wajah...');
+                    }
+                }, 2000);
+            });
+        }
+
+        function redirectToHome() {
+            window.location.href = '{{ url_for("home") }}';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target == successModal) {
+                redirectToHome();
+            }
+        }
+    </script>
+</body>
+</html>

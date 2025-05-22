@@ -3,7 +3,8 @@ import cv2
 import pandas as pd
 import numpy as np
 import json
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from datetime import datetime, date
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from keras_facenet import FaceNet
@@ -17,6 +18,7 @@ IMAGE_FOLDER = "data/wajah/"
 CSV_FILE = "data/keterangan.csv"
 USER_JSON = "data/users.json"
 EMBEDDINGS_FILE = "data/embeddings.csv"
+ATTENDANCE_FILE = "data/attendance.csv"  # File baru untuk menyimpan data absensi
 
 # Buat folder & file data kalau belum ada
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
@@ -31,20 +33,27 @@ if not os.path.exists(EMBEDDINGS_FILE):
     # Satu kolom nama + 512 kolom embedding float
     df = pd.DataFrame(columns=["Nama"] + [f"e{i}" for i in range(512)])
     df.to_csv(EMBEDDINGS_FILE, index=False)
+if not os.path.exists(ATTENDANCE_FILE):
+    # File untuk menyimpan data absensi
+    df = pd.DataFrame(columns=["Nama", "Tanggal", "Waktu", "Status"])
+    df.to_csv(ATTENDANCE_FILE, index=False)
 
 # USER JSON
 def load_users():
     with open(USER_JSON, 'r') as f:
         return json.load(f)
+
 def save_users(users):
     with open(USER_JSON, 'w') as f:
         json.dump(users, f, indent=2)
+
 def get_user(username):
     users = load_users()
     for user in users:
         if user["username"] == username:
             return user
     return None
+
 def add_user(username, password):
     users = load_users()
     if get_user(username) is not None:
@@ -57,6 +66,7 @@ def add_user(username, password):
     })
     save_users(users)
     return True
+
 def verify_user(username, password):
     user = get_user(username)
     if user and check_password_hash(user["password_hash"], password):
@@ -95,6 +105,44 @@ def save_face_data_and_embedding(id_, name_, img):
         df_e = pd.concat([df_e, new_row], ignore_index=True)
         df_e.to_csv(EMBEDDINGS_FILE, index=False)
 
+# FUNGSI ABSENSI
+def save_attendance(nama):
+    """Menyimpan data absensi ke file CSV"""
+    today = date.today().strftime('%Y-%m-%d')
+    now = datetime.now().strftime('%H:%M:%S')
+    
+    # Cek apakah sudah absen hari ini
+    df_attendance = pd.read_csv(ATTENDANCE_FILE)
+    if not df_attendance.empty:
+        today_attendance = df_attendance[
+            (df_attendance['Nama'] == nama) & 
+            (df_attendance['Tanggal'] == today)
+        ]
+        if not today_attendance.empty:
+            return False, "Anda sudah absen hari ini!"
+    
+    # Simpan absensi baru
+    new_attendance = pd.DataFrame([{
+        "Nama": nama,
+        "Tanggal": today,
+        "Waktu": now,
+        "Status": "Hadir"
+    }])
+    
+    df_attendance = pd.concat([df_attendance, new_attendance], ignore_index=True)
+    df_attendance.to_csv(ATTENDANCE_FILE, index=False)
+    return True, "Absensi berhasil!"
+
+def get_today_attendance():
+    """Mengambil data absensi hari ini"""
+    today = date.today().strftime('%Y-%m-%d')
+    df_attendance = pd.read_csv(ATTENDANCE_FILE)
+    if df_attendance.empty:
+        return []
+    
+    today_attendance = df_attendance[df_attendance['Tanggal'] == today]
+    return today_attendance.to_dict('records')
+
 # LOGIN DECORATOR
 def login_required(f):
     from functools import wraps
@@ -110,7 +158,13 @@ def login_required(f):
 @app.route('/')
 @login_required
 def home():
-    return render_template('home.html', username=session.get('user'))
+    # Ambil data absensi hari ini
+    today_attendance = get_today_attendance()
+    today_date = date.today().strftime('%d %B %Y')
+    return render_template('home.html', 
+                         username=session.get('user'),
+                         attendance_list=today_attendance,
+                         today_date=today_date)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -216,31 +270,49 @@ def scan_auto_page():
 @app.route('/scan_auto', methods=['POST'])
 @login_required
 def scan_auto():
-    import base64
-    data_url = request.form['webcam_image']
-    header, encoded = data_url.split(",", 1)
-    img_bytes = base64.b64decode(encoded)
-    nparr = np.frombuffer(img_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    try:
+        data_url = request.form['webcam_image']
+        header, encoded = data_url.split(",", 1)
+        img_bytes = base64.b64decode(encoded)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    # Proses seperti biasa
-    test_embedding = extract_face_embedding_with_facenet(img)
-    if test_embedding is None:
-        return {'result': 'Tidak terdeteksi wajah.'}
-    df = pd.read_csv(EMBEDDINGS_FILE)
-    if df.empty or len(df) == 0:
-        return {'result': 'Dataset kosong.'}
-    names = df["Nama"].values
-    embeddings = df.drop(columns=["Nama"]).values.astype(float)
-    sims = cosine_similarity([test_embedding], embeddings)
-    best_idx = np.argmax(sims)
-    best_score = sims[0][best_idx]
-    if best_score > 0.7:
-        name = names[best_idx]
-        hasil = f"Wajah: {name} ({best_score:.2f})"
-    else:
-        hasil = "Tidak dikenal"
-    return {'result': hasil}
+        # Proses seperti biasa
+        test_embedding = extract_face_embedding_with_facenet(img)
+        if test_embedding is None:
+            return jsonify({'success': False, 'message': 'Tidak terdeteksi wajah.'})
+        
+        df = pd.read_csv(EMBEDDINGS_FILE)
+        if df.empty or len(df) == 0:
+            return jsonify({'success': False, 'message': 'Dataset kosong.'})
+        
+        names = df["Nama"].values
+        embeddings = df.drop(columns=["Nama"]).values.astype(float)
+        sims = cosine_similarity([test_embedding], embeddings)
+        best_idx = np.argmax(sims)
+        best_score = sims[0][best_idx]
+        
+        if best_score > 0.7:
+            name = names[best_idx]
+            # Simpan absensi
+            success, message = save_attendance(name)
+            if success:
+                return jsonify({
+                    'success': True, 
+                    'message': f'Selamat datang, {name}!',
+                    'name': name,
+                    'confidence': f'{best_score:.2f}'
+                })
+            else:
+                return jsonify({
+                    'success': False, 
+                    'message': message,
+                    'name': name
+                })
+        else:
+            return jsonify({'success': False, 'message': 'Wajah tidak dikenal'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
 if __name__ == '__main__':
     app.run(debug=True)

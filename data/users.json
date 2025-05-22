@@ -8,5 +8,10 @@
     "id": 2,
     "username": "benni",
     "password_hash": "scrypt:32768:8:1$J3ezNRgdsetjXl4y$7a7dafedb1e609631dfe171feb23ea688f77a9cef831f8dcc393213096d176d2632d8ed0bed2be6d9d5c42fff78b95a1247e1928bee5130daf29bc6ea7f65c59"
+  },
+  {
+    "id": 3,
+    "username": "piopio",
+    "password_hash": "scrypt:32768:8:1$0iHyJisQokCDoAhS$a9462333d6126674c00363c1f116401146e445825775cda7b9bc77c50d265009223cafafc060f40e0357f1eb767d2138b832be7e93983a256f0dbc862abbe14f"
   }
 ]

@@ -1,6 +1,290 @@
-<h2>Hai, {{ username }}!</h2>
-<p>
-    <a href="{{ url_for('upload') }}">Upload Data Wajah</a> | 
-    <a href="{{ url_for('scan_auto_page') }}">Scan Wajah Otomatis</a>
-    <a href="{{ url_for('logout') }}">Logout</a>
-</p>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi Lab - Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .header .welcome {
+            color: #667eea;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .nav-btn.logout {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        }
+        
+        .attendance-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            color: #333;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            margin: 10px auto;
+            border-radius: 2px;
+        }
+        
+        .date-info {
+            text-align: center;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+        }
+        
+        .attendance-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .attendance-list {
+            overflow-x: auto;
+        }
+        
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .attendance-table th,
+        .attendance-table td {
+            padding: 15px 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .attendance-table th {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .attendance-table tr:hover {
+            background-color: #f8f9ff;
+        }
+        
+        .status-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #666;
+        }
+        
+        .empty-state i {
+            font-size: 4em;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h3 {
+            color: #999;
+            margin-bottom: 10px;
+        }
+        
+        .empty-state p {
+            color: #bbb;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .attendance-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1><i class="fas fa-user-check"></i> Sistem Absensi Laboratorium</h1>
+            <div class="welcome">Selamat datang, <strong>{{ username }}</strong>!</div>
+            
+            <div class="nav-buttons">
+                <a href="{{ url_for('upload') }}" class="nav-btn">
+                    <i class="fas fa-upload"></i> Upload Data Wajah
+                </a>
+                <a href="{{ url_for('scan_auto_page') }}" class="nav-btn">
+                    <i class="fas fa-camera"></i> Scan Wajah
+                </a>
+                <a href="{{ url_for('logout') }}" class="nav-btn logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+        
+        <!-- Attendance Section -->
+        <div class="attendance-section">
+            <h2 class="section-title"><i class="fas fa-calendar-check"></i> Absensi Hari Ini</h2>
+            
+            <div class="date-info">
+                <i class="fas fa-calendar"></i> {{ today_date }}
+            </div>
+            
+            <div class="attendance-stats">
+                <div class="stat-card">
+                    <div class="stat-number">{{ attendance_list|length }}</div>
+                    <div class="stat-label">Total Hadir</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ attendance_list|length }}</div>
+                    <div class="stat-label">Anggota Aktif</div>
+                </div>
+            </div>
+            
+            {% if attendance_list %}
+            <div class="attendance-list">
+                <table class="attendance-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-hashtag"></i> No</th>
+                            <th><i class="fas fa-user"></i> Nama</th>
+                            <th><i class="fas fa-clock"></i> Waktu</th>
+                            <th><i class="fas fa-check-circle"></i> Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attendance in attendance_list %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><strong>{{ attendance.Nama }}</strong></td>
+                            <td>{{ attendance.Waktu }}</td>
+                            <td><span class="status-badge">{{ attendance.Status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-user-clock"></i>
+                <h3>Belum Ada Absensi</h3>
+                <p>Belum ada anggota lab yang melakukan absensi hari ini.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
