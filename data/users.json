@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "username": "daninoar",
+    "password_hash": "scrypt:32768:8:1$VQxRDQLPR6cHe9Si$654b44a73556406455fdde4622d2c34d3bff38fe83edc50c83b3c152552e1dbdc3030f51a88a33f54046c219f9685f9858f0338b482cb7395762462b9c8bfa7a"
+  },
+  {
+    "id": 2,
+    "username": "benni",
+    "password_hash": "scrypt:32768:8:1$J3ezNRgdsetjXl4y$7a7dafedb1e609631dfe171feb23ea688f77a9cef831f8dcc393213096d176d2632d8ed0bed2be6d9d5c42fff78b95a1247e1928bee5130daf29bc6ea7f65c59"
+  }
+]

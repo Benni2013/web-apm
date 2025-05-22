@@ -1,0 +1,54 @@
+<h2>Upload Wajah</h2>
+<form id="uploadForm" method="POST" enctype="multipart/form-data">
+    <input name="id" placeholder="ID" required><br>
+    <input name="name" placeholder="Nama" required><br><br>
+    
+    <!-- Opsi 1: Upload File -->
+    <label>Upload Gambar dari File:</label>
+    <input type="file" name="image" accept="image/*"><br><br>
+    
+    <!-- Opsi 2: Ambil dari Kamera -->
+    <label>Atau, Ambil Gambar dari Kamera:</label><br>
+    <video id="video" width="320" height="240" autoplay></video>
+    <br>
+    <button type="button" id="snap">Ambil Foto</button>
+    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+    <input type="hidden" name="webcam_image" id="webcam_image"><br>
+    <img id="preview" src="#" alt="Preview" style="display:none;width:160px;"><br>
+    
+    <br>
+    <button type="submit">Upload</button>
+</form>
+<p><a href="{{ url_for('home') }}">Kembali ke Home</a></p>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <ul>
+    {% for category, message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const snap = document.getElementById('snap');
+const webcam_image = document.getElementById('webcam_image');
+const preview = document.getElementById('preview');
+
+// Aktifkan kamera
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => { video.srcObject = stream; })
+    .catch(err => { console.log("Tidak dapat akses kamera.") });
+
+snap.onclick = function(e) {
+    canvas.style.display = "block";
+    canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+    // Konversi ke base64
+    const dataURL = canvas.toDataURL('image/jpeg', 0.95);
+    webcam_image.value = dataURL;
+    preview.src = dataURL;
+    preview.style.display = "inline";
+};
+</script>

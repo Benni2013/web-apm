@@ -1,0 +1,43 @@
+<h2>Scan/Pengenalan Wajah Otomatis dari Kamera</h2>
+<video id="video" width="320" height="240" autoplay></video>
+<canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+<p id="result"><i>Memulai kamera...</i></p>
+<p><a href="{{ url_for('home') }}">Kembali ke Home</a></p>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const result = document.getElementById('result');
+let scanning = true;
+
+// Start webcam
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => { video.srcObject = stream; })
+    .catch(err => { result.innerText = "Kamera tidak tersedia!"; scanning = false; });
+
+function autoScan() {
+    if (!scanning) return;
+    canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+    let dataURL = canvas.toDataURL('image/jpeg', 0.95);
+
+    let formData = new FormData();
+    formData.append('webcam_image', dataURL);
+
+    fetch('{{ url_for("scan_auto") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        result.innerHTML = "<b>" + data.result + "</b>";
+        setTimeout(autoScan, 2000); // Ulangi setiap 2 detik (bisa disesuaikan)
+    })
+    .catch(err => {
+        result.innerHTML = "Gagal scan";
+        setTimeout(autoScan, 2000);
+    });
+}
+
+// Mulai autoscan setelah 2 detik kamera aktif
+setTimeout(autoScan, 2000);
+</script>

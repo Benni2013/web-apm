@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Register - RDBI</title>
+    <meta name="viewport" content="width=400, initial-scale=1">
+    <style>
+        body {
+            background: #e3f2fd;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .reg-container {
+            background: #fff;
+            padding: 32px 32px 24px 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(30, 136, 229, 0.11), 0 1.5px 2px #b0bec5;
+            width: 350px;
+            text-align: center;
+        }
+        .login-logo img {
+            width: 64px;
+            margin-bottom: 4px;
+        }
+        .login-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #1565c0;
+            letter-spacing: 0.02em;
+        }
+        .login-desc {
+            font-size: 1rem;
+            margin-bottom: 22px;
+            color: #37474f;
+            opacity: 0.8;
+        }
+        .reg-container input[type="text"],
+        .reg-container input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            border: 1.5px solid #90caf9;
+            border-radius: 8px;
+            outline: none;
+            font-size: 1rem;
+            transition: border .2s;
+        }
+        .reg-container input[type="text"]:focus,
+        .reg-container input[type="password"]:focus {
+            border: 2px solid #42a5f5;
+        }
+        .reg-container button {
+            width: 100%;
+            padding: 12px 0;
+            border: none;
+            border-radius: 8px;
+            background: #42a5f5;
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 16px;
+            transition: background 0.2s;
+        }
+        .reg-container button:hover {
+            background: #1976d2;
+        }
+        .login-links {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 2px;
+        }
+        .login-links a {
+            color: #1976d2;
+            text-decoration: none;
+            font-size: 0.99rem;
+            transition: color 0.18s;
+        }
+        .login-links a:hover {
+            color: #0d47a1;
+            text-decoration: underline;
+        }
+        ul { list-style: none; padding: 0; }
+        li { color: #e53935; margin-bottom: 8px; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+    <div class="reg-container">
+        <div class="login-logo">
+            <img src="https://img.icons8.com/fluency/48/globe--v2.png" alt="Logo" />
+        </div>
+        <div class="login-title">RDBI</div>
+        <div class="login-desc">Rekayasa Data dan Business Intelligence</div>
+        <form method="POST" autocomplete="off">
+            <input name="username" type="text" placeholder="Nama Pengguna" required autofocus>
+            <input name="password" type="password" placeholder="Kata Sandi" required>
+            <input name="confirm" type="password" placeholder="Ulangi Kata Sandi" required>
+            <button type="submit">Register</button>
+        </form>
+        <div class="login-links">
+            <a href="{{ url_for('login') }}">Sudah punya akun? Login</a>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul>
+            {% for category, message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+        {% endwith %}
+    </div>
+</body>
+</html>
