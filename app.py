@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import json
 from datetime import datetime, date
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from keras_facenet import FaceNet
@@ -136,12 +136,55 @@ def save_attendance(nama):
 def get_today_attendance():
     """Mengambil data absensi hari ini"""
     today = date.today().strftime('%Y-%m-%d')
-    df_attendance = pd.read_csv(ATTENDANCE_FILE)
-    if df_attendance.empty:
-        return []
+    return get_attendance_by_date(today)
+
+def get_attendance_by_date(selected_date):
+    """Mengambil data absensi berdasarkan tanggal tertentu"""
+    try:
+        df_attendance = pd.read_csv(ATTENDANCE_FILE)
+        if df_attendance.empty:
+            return []
+        
+        # Filter berdasarkan tanggal
+        date_attendance = df_attendance[df_attendance['Tanggal'] == selected_date]
+        
+        # Konversi ke list of dict dan tambahkan informasi divisi
+        attendance_list = []
+        df_keterangan = pd.read_csv(CSV_FILE)
+        
+        for _, row in date_attendance.iterrows():
+            attendance_data = {
+                'Nama': row['Nama'],
+                'Tanggal': row['Tanggal'],
+                'Waktu': row['Waktu'],
+                'Status': row['Status'],
+                'Divisi': 'Pengembangan'  # Default divisi, bisa disesuaikan
+            }
+            
+            # Cari divisi dari data keterangan jika ada
+            member_info = df_keterangan[df_keterangan['Nama'] == row['Nama']]
+            if not member_info.empty and 'Divisi' in member_info.columns:
+                attendance_data['Divisi'] = member_info.iloc[0]['Divisi']
+            
+            attendance_list.append(attendance_data)
+        
+        return attendance_list
     
-    today_attendance = df_attendance[df_attendance['Tanggal'] == today]
-    return today_attendance.to_dict('records')
+    except Exception as e:
+        print(f"Error getting attendance by date: {e}")
+        return []
+
+def format_date_indonesia(date_str):
+    """Format tanggal ke bahasa Indonesia"""
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+        months = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ]
+        return f"{date_obj.day} {months[date_obj.month - 1]} {date_obj.year}"
+    except:
+        return date_str
 
 # LOGIN DECORATOR
 def login_required(f):
@@ -158,13 +201,25 @@ def login_required(f):
 @app.route('/')
 @login_required
 def home():
-    # Ambil data absensi hari ini
-    today_attendance = get_today_attendance()
-    today_date = date.today().strftime('%d %B %Y')
+    return redirect(url_for('dashboard'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    # Ambil tanggal dari parameter atau gunakan hari ini
+    selected_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+    
+    # Ambil data absensi berdasarkan tanggal
+    attendance_list = get_attendance_by_date(selected_date)
+    
+    # Format tanggal untuk tampilan
+    today_date_formatted = format_date_indonesia(selected_date)
+    
     return render_template('home.html', 
                          username=session.get('user'),
-                         attendance_list=today_attendance,
-                         today_date=today_date)
+                         attendance_list=attendance_list,
+                         today_date=today_date_formatted,
+                         today_date_iso=selected_date)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -216,7 +271,7 @@ def login():
         if verify_user(username, password):
             session['user'] = username
             flash('Login sukses!', 'success')
-            return redirect(url_for('home'))
+            return redirect(url_for('dashboard'))
         else:
             flash('Username atau password salah!', 'danger')
     return render_template('login.html')
@@ -261,6 +316,22 @@ def upload():
         else:
             flash('Gambar belum dipilih atau diambil!', 'danger')
     return render_template('upload.html')
+
+@app.route('/export_pdf')
+@login_required
+def export_pdf():
+    selected_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+    
+    # Ambil data absensi berdasarkan tanggal
+    attendance_list = get_attendance_by_date(selected_date)
+    
+    # Format tanggal untuk judul laporan
+    formatted_date = format_date_indonesia(selected_date)
+    
+    # Di sini Anda bisa menambahkan logic untuk generate PDF
+    # Untuk saat ini, saya akan mengembalikan response sederhana
+    flash(f'Export PDF untuk tanggal {formatted_date} - Total: {len(attendance_list)} orang', 'info')
+    return redirect(url_for('dashboard', date=selected_date))
 
 @app.route('/scan_auto_page')
 @login_required
