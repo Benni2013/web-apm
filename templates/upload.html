@@ -1,54 +1,466 @@
-<h2>Upload Wajah</h2>
-<form id="uploadForm" method="POST" enctype="multipart/form-data">
-    <input name="id" placeholder="ID" required><br>
-    <input name="name" placeholder="Nama" required><br><br>
-    
-    <!-- Opsi 1: Upload File -->
-    <label>Upload Gambar dari File:</label>
-    <input type="file" name="image" accept="image/*"><br><br>
-    
-    <!-- Opsi 2: Ambil dari Kamera -->
-    <label>Atau, Ambil Gambar dari Kamera:</label><br>
-    <video id="video" width="320" height="240" autoplay></video>
-    <br>
-    <button type="button" id="snap">Ambil Foto</button>
-    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
-    <input type="hidden" name="webcam_image" id="webcam_image"><br>
-    <img id="preview" src="#" alt="Preview" style="display:none;width:160px;"><br>
-    
-    <br>
-    <button type="submit">Upload</button>
-</form>
-<p><a href="{{ url_for('home') }}">Kembali ke Home</a></p>
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    <ul>
-    {% for category, message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
-{% endwith %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDBI - Tambah Data Anggota</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4F63D2 0%, #5A67D8 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .logo-text h1 {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0.2rem;
+        }
+        
+        .logo-text p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav a:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .form-title {
+            font-size: 2rem;
+            color: #4F63D2;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .form-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #4F63D2;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .form-group input {
+            padding: 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #F8FAFC;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #4F63D2;
+            box-shadow: 0 0 0 3px rgba(79, 99, 210, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .camera-section {
+            background: #F8FAFC;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        #video {
+            border: 3px solid #4F63D2;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        #canvas {
+            border-radius: 12px;
+        }
+        
+        .camera-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .photo-preview {
+            max-width: 320px;
+            max-height: 240px;
+            border-radius: 12px;
+            margin: 1rem auto;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .btn-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+            min-width: 120px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4F63D2 0%, #5A67D8 100%);
+            color: white;
+            box-shadow: 0 10px 25px rgba(79, 99, 210, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(79, 99, 210, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #E2E8F0;
+            color: #4A5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #CBD5E0;
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn {
+            flex: 1;
+        }
+        
+        .back-link {
+            flex: 1;
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, #48BB78 0%, #38A169 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #F56565 0%, #E53E3E 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav {
+                gap: 1rem;
+            }
+            
+            .form-card {
+                padding: 1.5rem;
+            }
+            
+            .btn-container {
+                flex-direction: column;
+            }
+            
+            .camera-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            #video {
+                width: 100%;
+                max-width: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🎯</div>
+                <div class="logo-text">
+                    <h1>RDBI</h1>
+                    <p>Rekayasa Data dan Business Intelligence</p>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="/">Home</a>
+                <a href="/scan_auto_page">Absensi</a>
+                <a href="#anggota">Anggota</a>
+            </nav>
+        </div>
+    </div>
 
-<script>
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const snap = document.getElementById('snap');
-const webcam_image = document.getElementById('webcam_image');
-const preview = document.getElementById('preview');
+    <!-- FORM -->
+    <div class="container">
+        <div class="form-card">
+            <h2 class="form-title">Tambah Data Anggota</h2>
+            <div id="messages"></div>
 
-// Aktifkan kamera
-navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => { video.srcObject = stream; })
-    .catch(err => { console.log("Tidak dapat akses kamera.") });
+            <form id="uploadForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="id">ID Anggota</label>
+                        <input type="text" id="id" name="id" placeholder="ID" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Nama Anggota</label>
+                        <input type="text" id="name" name="name" placeholder="Nama" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="divisi">Divisi</label>
+                        <input type="text" id="divisi" name="divisi" placeholder="Divisi" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Foto Anggota</label>
+                        <div class="camera-section">
+                            <video id="video" width="320" height="240" autoplay></video>
+                            <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
+                            <img id="preview" class="photo-preview" alt="Preview"/>
 
-snap.onclick = function(e) {
-    canvas.style.display = "block";
-    canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
-    // Konversi ke base64
-    const dataURL = canvas.toDataURL('image/jpeg', 0.95);
-    webcam_image.value = dataURL;
-    preview.src = dataURL;
-    preview.style.display = "inline";
-};
-</script>
+                            <div class="camera-controls">
+                                <button type="button" id="snap" class="btn btn-primary">Ambil Foto</button>
+                                <button type="button" id="retake" class="btn btn-secondary" style="display: none;">Foto Ulang</button>
+                            </div>
+
+                            <input type="hidden" name="webcam_image" id="webcam_image"/>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-container">
+                    <button type="submit" class="btn btn-primary submit-btn">Upload</button>
+                    <a href="#home" class="btn btn-secondary back-link">Kembali ke Home</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const snap = document.getElementById('snap');
+        const retake = document.getElementById('retake');
+        const webcam_image = document.getElementById('webcam_image');
+        const preview = document.getElementById('preview');
+        const form = document.getElementById('uploadForm');
+        const messages = document.getElementById('messages');
+
+        // Aktifkan kamera
+        let stream = null;
+        navigator.mediaDevices?.getUserMedia({ video: true })
+        .then(mediaStream => {
+            video.srcObject = mediaStream;
+            stream = mediaStream;
+            showMessage('Kamera berhasil diaktifkan!', 'success');
+        })
+        .catch(error => {
+            console.error('Kamera tidak dapat diakses:', error);
+            showMessage(`Tidak dapat mengakses kamera: ${error.message}`, 'error');
+        });
+
+
+        // Ambil foto
+        snap.addEventListener('click', function (e) {
+            e.preventDefault();
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg', 0.95);
+            webcam_image.value = dataURL;
+
+            preview.src = dataURL;
+            preview.style.display = "block";
+            video.style.display = "none";
+            snap.style.display = "none";
+            retake.style.display = "inline-block";
+
+            showMessage('Foto berhasil diambil!', 'success');
+        });
+
+        // Foto ulang
+        retake.addEventListener('click', function (e) {
+            e.preventDefault();
+            preview.style.display = "none";
+            video.style.display = "block";
+            snap.style.display = "inline-block";
+            retake.style.display = "none";
+            webcam_image.value = "";
+        });
+
+        // Kirim data
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById('id').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const divisi = document.getElementById('divisi').value.trim();
+            const image = webcam_image.value.trim();
+
+            if (!id || !name || !divisi) {
+                showMessage('Semua field harus diisi!', 'error');
+                return;
+            }
+
+            if (!image) {
+                showMessage('Silakan ambil foto terlebih dahulu!', 'error');
+                return;
+            }
+
+            // Contoh AJAX (gunakan sesuai backend Anda)
+            const formData = {
+                id,
+                name,
+                divisi,
+                webcam_image: image
+            };
+
+            // Kirim ke backend (ganti URL sesuai server Anda)
+            fetch('/submit-anggota', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+             .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Data anggota berhasil diunggah!', 'success');
+                    form.reset();
+                    preview.style.display = "none";
+                    video.style.display = "block";
+                    snap.style.display = "inline-block";
+                    retake.style.display = "none";
+                    webcam_image.value = "";
+                } else {
+                    showMessage(data.message || 'Gagal mengunggah data.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Kesalahan saat mengirim data:', error);
+                showMessage('Terjadi kesalahan saat mengirim data.', 'error');
+            });
+        });
+
+        // Fungsi menampilkan pesan sukses/gagal
+        function showMessage(message, type) {
+            messages.innerHTML = `
+                <div class="${type === 'success' ? 'success-message' : 'error-message'}">
+                    ${message}
+                </div>
+            `;
+
+            setTimeout(() => {
+                messages.innerHTML = '';
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
