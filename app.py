@@ -10,6 +10,9 @@ from werkzeug.utils import secure_filename
 from keras_facenet import FaceNet
 from sklearn.metrics.pairwise import cosine_similarity
 import base64
+from flask_sqlalchemy import SQLAlchemy
+import io
+from flask import send_file
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -19,6 +22,42 @@ CSV_FILE = "data/keterangan.csv"
 USER_JSON = "data/users.json"
 EMBEDDINGS_FILE = "data/embeddings.csv"
 ATTENDANCE_FILE = "data/attendance.csv"  # File baru untuk menyimpan data absensi
+
+app.config['SQLALCHEMY_DATABASE_URI']  = 'mysql+pymysql://root:@localhost/absen_apm'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+class Anggota(db.Model):
+    __tablename__ = 'anggota'
+    id_anggota = db.Column(db.String(20), primary_key=True)
+    nama       = db.Column(db.String(100), nullable=False)
+    divisi     = db.Column(db.String(50),  nullable=False)
+    path_wajah = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(),
+                            onupdate=db.func.current_timestamp())
+
+class VektorWajah(db.Model):
+    __tablename__ = 'vektor_wajah'
+    id_vektor_wajah = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id_anggota      = db.Column(db.String(20), db.ForeignKey('anggota.id_anggota',
+                            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    vektor          = db.Column(db.JSON, nullable=False)
+    created_at      = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+class AbsenPiket(db.Model):
+    __tablename__ = 'absen_piket'
+    id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id_anggota = db.Column(db.String(20), db.ForeignKey('anggota.id_anggota',
+                            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    tanggal    = db.Column(db.Date,    nullable=False)
+    waktu      = db.Column(db.Time,    nullable=False)
+    status     = db.Column(db.Enum('Hadir','Tidak Hadir','Terlambat'),
+                            nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    __table_args__ = (db.UniqueConstraint('id_anggota','tanggal',
+                         name='unique_attendance'),)
+
 
 # Buat folder & file data kalau belum ada
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
@@ -76,61 +115,84 @@ def verify_user(username, password):
 # KERAS-FACENET
 embedder = FaceNet()
 
-def extract_face_embedding_with_facenet(img):
-    faces = embedder.extract(img, threshold=0.95)
-    if faces:
-        return faces[0]['embedding']
-    else:
+def crop_face_oval(img):
+    # 1. Buat mask oval di tengah frame (sesuai overlay CSS: 240×200 pada video 400×300)
+    h, w = img.shape[:2]
+    center = (w//2, h//2)
+    axes = (int(w * 0.6 / 2), int(h * 0.6667 / 2))  # 0.6*400/2=120 ; 0.6667*300/2=100
+    mask = np.zeros((h, w), dtype=np.uint8)
+    cv2.ellipse(mask, center, axes, 0, 0, 360, 255, -1)
+
+    # 2. Terapkan mask: area di luar oval jadi hitam
+    masked_img = cv2.bitwise_and(img, img, mask=mask)
+
+    # 3. Deteksi wajah hanya pada masked_img
+    gray = cv2.cvtColor(masked_img, cv2.COLOR_BGR2GRAY)
+    face_cascade = cv2.CascadeClassifier(
+        cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+    )
+    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+
+    if len(faces) == 0:
         return None
 
-def save_face_data_and_embedding(id_, name_, img):
-    # Save image to personal folder
-    folder_path = os.path.join(IMAGE_FOLDER, f"{id_}_{name_}")
-    os.makedirs(folder_path, exist_ok=True)
-    filename = f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}.jpg"
-    image_path = os.path.join(folder_path, filename)
-    cv2.imwrite(image_path, img)
+    # 4. Ambil crop bounding-box pertama dari masked_img
+    x, y, w_box, h_box = faces[0]
+    return masked_img[y:y+h_box, x:x+w_box]
 
-    # Update CSV data keterangan
-    df = pd.read_csv(CSV_FILE)
-    df = pd.concat([df, pd.DataFrame([{"ID": id_, "Nama": name_, "Path Wajah": image_path}])], ignore_index=True)
-    df.to_csv(CSV_FILE, index=False)
+def extract_face_embedding_with_facenet(img):
+    face_img = crop_face_oval(img)
+    if face_img is None:
+        return None
+    faces = embedder.extract(face_img, threshold=0.95)
+    return faces[0]['embedding'] if faces else None
 
-    # Extract embedding dan simpan ke embeddings.csv
-    embedding = extract_face_embedding_with_facenet(image_path)
+def save_face_data_and_embedding(id_, name_, divisi, img):
+    # 1. Simpan file gambar ke disk
+    folder = os.path.join(IMAGE_FOLDER, f"{id_}_{name_}")
+    os.makedirs(folder, exist_ok=True)
+    fn = f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}.jpg"
+    path = os.path.join(folder, fn)
+    cv2.imwrite(path, img)
+
+    # 2. Upsert ke tabel anggota
+    anggota = Anggota.query.get(id_)
+    if not anggota:
+        anggota = Anggota(
+            id_anggota=id_,
+            nama=name_,
+            divisi=divisi,
+            path_wajah=path
+        )
+        db.session.add(anggota)
+    else:
+        anggota.nama        = name_
+        anggota.divisi      = divisi
+        anggota.path_wajah  = path
+    db.session.flush()
+
+    # 3. Extract embedding & simpan ke vektor_wajah
+    embedding = extract_face_embedding_with_facenet(img)
     if embedding is not None:
-        df_e = pd.read_csv(EMBEDDINGS_FILE)
-        # Kolom = Nama, e0, e1, ..., e511
-        new_row = pd.DataFrame([[name_] + list(embedding)], columns=df_e.columns)
-        df_e = pd.concat([df_e, new_row], ignore_index=True)
-        df_e.to_csv(EMBEDDINGS_FILE, index=False)
+        vw = VektorWajah(id_anggota=id_, vektor=list(map(float, embedding)))
+        db.session.add(vw)
+
+    db.session.commit()
 
 # FUNGSI ABSENSI
-def save_attendance(nama):
-    """Menyimpan data absensi ke file CSV"""
-    today = date.today().strftime('%Y-%m-%d')
-    now = datetime.now().strftime('%H:%M:%S')
-    
-    # Cek apakah sudah absen hari ini
-    df_attendance = pd.read_csv(ATTENDANCE_FILE)
-    if not df_attendance.empty:
-        today_attendance = df_attendance[
-            (df_attendance['Nama'] == nama) & 
-            (df_attendance['Tanggal'] == today)
-        ]
-        if not today_attendance.empty:
-            return False, "Anda sudah absen hari ini!"
-    
-    # Simpan absensi baru
-    new_attendance = pd.DataFrame([{
-        "Nama": nama,
-        "Tanggal": today,
-        "Waktu": now,
-        "Status": "Hadir"
-    }])
-    
-    df_attendance = pd.concat([df_attendance, new_attendance], ignore_index=True)
-    df_attendance.to_csv(ATTENDANCE_FILE, index=False)
+def save_attendance(id_anggota):
+    today = date.today()
+    # Cek already absen
+    exists = AbsenPiket.query.filter_by(
+        id_anggota=id_anggota, tanggal=today).first()
+    if exists:
+        return False, "Anda sudah absen hari ini!"
+    # Simpan
+    now = datetime.now().time()
+    absen = AbsenPiket(id_anggota=id_anggota, tanggal=today,
+                       waktu=now, status='Hadir')
+    db.session.add(absen)
+    db.session.commit()
     return True, "Absensi berhasil!"
 
 def get_today_attendance():
@@ -139,40 +201,21 @@ def get_today_attendance():
     return get_attendance_by_date(today)
 
 def get_attendance_by_date(selected_date):
-    """Mengambil data absensi berdasarkan tanggal tertentu"""
-    try:
-        df_attendance = pd.read_csv(ATTENDANCE_FILE)
-        if df_attendance.empty:
-            return []
-        
-        # Filter berdasarkan tanggal
-        date_attendance = df_attendance[df_attendance['Tanggal'] == selected_date]
-        
-        # Konversi ke list of dict dan tambahkan informasi divisi
-        attendance_list = []
-        df_keterangan = pd.read_csv(CSV_FILE)
-        
-        for _, row in date_attendance.iterrows():
-            attendance_data = {
-                'Nama': row['Nama'],
-                'Tanggal': row['Tanggal'],
-                'Waktu': row['Waktu'],
-                'Status': row['Status'],
-                'Divisi': 'Pengembangan'  # Default divisi, bisa disesuaikan
-            }
-            
-            # Cari divisi dari data keterangan jika ada
-            member_info = df_keterangan[df_keterangan['Nama'] == row['Nama']]
-            if not member_info.empty and 'Divisi' in member_info.columns:
-                attendance_data['Divisi'] = member_info.iloc[0]['Divisi']
-            
-            attendance_list.append(attendance_data)
-        
-        return attendance_list
-    
-    except Exception as e:
-        print(f"Error getting attendance by date: {e}")
-        return []
+    rows = (db.session.query(AbsenPiket, Anggota)
+            .join(Anggota, AbsenPiket.id_anggota == Anggota.id_anggota)
+            .filter(AbsenPiket.tanggal == selected_date)
+            .all())
+    result = []
+    for absen, anggota in rows:
+        result.append({
+            'id_anggota' : anggota.id_anggota,
+            'Nama': anggota.nama,
+            'Divisi': anggota.divisi,
+            'Tanggal': str(absen.tanggal),
+            'Waktu': absen.waktu.strftime('%H:%M:%S'),
+            'Status': absen.status
+        })
+    return result
 
 def format_date_indonesia(date_str):
     """Format tanggal ke bahasa Indonesia"""
@@ -199,12 +242,10 @@ def login_required(f):
 
 # ROUTES
 @app.route('/')
-@login_required
 def home():
     return redirect(url_for('dashboard'))
 
 @app.route('/dashboard')
-@login_required
 def dashboard():
     # Ambil tanggal dari parameter atau gunakan hari ini
     selected_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
@@ -287,59 +328,77 @@ def logout():
 @login_required
 def upload():
     if request.method == 'POST':
-        id_ = request.form['id']
-        name_ = request.form['name']
-        img = None
+        # 1) Parse JSON payload
+        data = request.get_json() or {}
+        id_           = data.get('id', '').strip()
+        name_         = data.get('name', '').strip()
+        divisi        = data.get('divisi', '').strip()
+        webcam_image  = data.get('webcam_image', '')
 
-        # 1. Dari file
-        if 'image' in request.files and request.files['image'].filename != '':
-            file = request.files['image']
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(IMAGE_FOLDER, filename)
-            file.save(file_path)
-            img = cv2.imread(file_path)
+        # 2) Validasi input
+        if not id_ or not name_ or not divisi:
+            return jsonify(success=False,
+                           message='ID, Nama, dan Divisi harus diisi!')
 
-        # 2. Dari webcam (base64 string)
-        elif 'webcam_image' in request.form and request.form['webcam_image'] != '':
-            data_url = request.form['webcam_image']
-            # format data_url: "data:image/jpeg;base64,....."
-            header, encoded = data_url.split(",", 1)
+        # 3) Decode gambar dari base64
+        if webcam_image:
+            header, encoded = webcam_image.split(',', 1)
             img_bytes = base64.b64decode(encoded)
             nparr = np.frombuffer(img_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        # Jika ada gambar, simpan dan embedding
-        if img is not None:
-            save_face_data_and_embedding(id_, name_, img)
-            flash('Data wajah & embedding berhasil di-upload!', 'success')
-            return redirect(url_for('upload'))
         else:
-            flash('Gambar belum dipilih atau diambil!', 'danger')
+            return jsonify(success=False,
+                           message='Silakan ambil foto sebelum submit!')
+
+        # 4) Simpan ke DB + embedding
+        save_face_data_and_embedding(id_, name_, divisi, img)
+        return jsonify(success=True,
+                       message=f'Anggota {name_} berhasil ditambahkan!')
+
+    # untuk GET, render halaman upload
     return render_template('upload.html')
 
-@app.route('/export_pdf')
+@app.route('/export_excel')
 @login_required
-def export_pdf():
+def export_excel():
+    # 1. Ambil tanggal
     selected_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
-    
-    # Ambil data absensi berdasarkan tanggal
-    attendance_list = get_attendance_by_date(selected_date)
-    
-    # Format tanggal untuk judul laporan
-    formatted_date = format_date_indonesia(selected_date)
-    
-    # Di sini Anda bisa menambahkan logic untuk generate PDF
-    # Untuk saat ini, saya akan mengembalikan response sederhana
-    flash(f'Export PDF untuk tanggal {formatted_date} - Total: {len(attendance_list)} orang', 'info')
-    return redirect(url_for('dashboard', date=selected_date))
+    # 2. Ambil data absensi
+    attendance = get_attendance_by_date(selected_date)
+    if not attendance:
+        flash(f"Tidak ada data absensi pada {format_date_indonesia(selected_date)}", 'warning')
+        return redirect(url_for('dashboard', date=selected_date))
+
+    # 3. Buat DataFrame dan sisipkan kolom No
+    df = pd.DataFrame(attendance)
+    df.insert(0, 'No', range(1, len(df) + 1))   # kolom 'No' dari 1..n
+
+    # 4. Tulis ke Excel di memori
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Absensi')
+        worksheet = writer.sheets['Absensi']
+        # Atur lebar kolom otomatis
+        for idx, col in enumerate(df.columns):
+            max_len = df[col].astype(str).map(len).max()
+            header_len = len(col)
+            width = max(max_len, header_len) + 2
+            worksheet.set_column(idx, idx, width)
+
+    output.seek(0)
+    filename = f"Absensi_{selected_date}.xlsx"
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 @app.route('/scan_auto_page')
-@login_required
 def scan_auto_page():
     return render_template('scan.html')
 
 @app.route('/scan_auto', methods=['POST'])
-@login_required
 def scan_auto():
     try:
         data_url = request.form['webcam_image']
@@ -364,9 +423,13 @@ def scan_auto():
         best_score = sims[0][best_idx]
         
         if best_score > 0.7:
+            # di scan_auto, setelah best_score > threshold
             name = names[best_idx]
-            # Simpan absensi
-            success, message = save_attendance(name)
+            anggota = Anggota.query.filter_by(nama=name).first()
+            if not anggota:
+                # nama ada di embeddings.csv tapi belum tercatat di anggota DB
+                return jsonify({'success': False, 'message': 'Wajah tidak dikenal'})
+            success, message = save_attendance(anggota.id_anggota)
             if success:
                 return jsonify({
                     'success': True, 

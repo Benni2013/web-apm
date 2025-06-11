@@ -40,8 +40,8 @@
         }
         .login-container input[type="text"],
         .login-container input[type="password"] {
-            width: 100%;
-            padding: 12px 14px;
+            width: 95%;
+            padding: 12px 0px;
             margin-bottom: 16px;
             border: 1.5px solid #90caf9;
             border-radius: 8px;
@@ -96,13 +96,13 @@
             <!-- Pakai logo PNG sendiri -->
             <!-- <img src="{{ url_for('static', filename='b332e2b1-1d52-4334-b5c6-efa9ae65c941.png') }}" alt="RDBI Logo"> -->
             <!-- Atau pakai emoji/globe sementara -->
-            <img src="https://img.icons8.com/fluency/48/globe--v2.png" alt="Logo" />
+            <img src="/static/images/rdbi.png" alt="Logo" />
         </div>
         <div class="login-title">RDBI</div>
         <div class="login-desc">Rekayasa Data dan Business Intelligence</div>
         <form method="POST" autocomplete="off">
-            <input name="username" type="text" placeholder="Nama Pengguna" required autofocus>
-            <input name="password" type="password" placeholder="Kata Sandi" required>
+            <input name="username" type="text" placeholder="Nama Pengguna" required autofocus style="padding-left: 1rem;">
+            <input name="password" type="password" placeholder="Kata Sandi" required style="padding-left: 1rem;">
             <button type="submit">Login</button>
         </form>
         <div class="login-links">

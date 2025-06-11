@@ -325,6 +325,27 @@
           font-size: 14px;
         }
 
+        /* Tombol Logout Profesional */
+        .nav-menu li.logout {
+          margin-left: auto;            /* Dorong tombol ke ujung kanan navbar */
+        }
+        .nav-menu li.logout a {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border: 1px solid white;
+          border-radius: 20px;
+          padding: 8px 16px;
+          background: rgba(255,255,255,0.2);
+          color: white;
+          font-weight: 600;
+          transition: background 0.2s, color 0.2s;
+        }
+        .nav-menu li.logout a:hover {
+          background: white;
+          color: #357abd;
+        }
+
         .report-header {
           flex-direction: column;
           gap: 15px;
@@ -363,9 +384,18 @@
         </div>
         </div>
         <ul class="nav-menu">
-        <li><a href="{{ url_for('dashboard') }}" class="active">Home</a></li>
-        <li><a href="{{ url_for('scan_auto_page') }}">Absensi</a></li>
-        <li><a href="{{ url_for('upload') }}">Anggota</a></li>
+          <li><a href="{{ url_for('dashboard') }}" class="active">Home</a></li>
+          <li><a href="{{ url_for('scan_auto_page') }}">Absensi</a></li>
+          <li><a href="{{ url_for('upload') }}">Anggota</a></li>
+          {% if username %}
+          <!-- Tombol Logout hanya tampil kalau sudah login -->
+          <li class="logout">
+            <a href="{{ url_for('logout') }}">
+              <i class="fas fa-sign-out-alt"></i>
+              Logout
+            </a>
+          </li>
+          {% endif %}
         </ul>
     </div>
     </nav>
@@ -387,9 +417,9 @@
               onchange="filterByDate()"
             />
           </div>
-          <button class="pdf-btn" onclick="exportPDF()">
-            <i class="fas fa-file-pdf"></i>
-            Cetak PDF
+          <button class="pdf-btn" onclick="exportExcel()">
+            <i class="fas fa-file-excel"></i>
+              Cetak Excel
           </button>
         </div>
       </div>
@@ -411,7 +441,7 @@
             <tr>
               <td class="col-no">{{ loop.index }}</td>
               <td class="col-id">
-                <span class="member-id">{{ '%03d'|format(loop.index) }}</span>
+                <span class="member-id">{{ attendance.id_anggota }}</span>
               </td>
               <td class="col-nama">{{ attendance.Nama }}</td>
               <td class="col-divisi">
@@ -443,10 +473,9 @@
         window.location.href = `{{ url_for('dashboard') }}?date=${selectedDate}`;
       }
 
-      function exportPDF() {
+      function exportExcel() {
         const selectedDate = document.getElementById("date-filter").value;
-        // Redirect ke route export PDF Flask
-        window.location.href = `{{ url_for('export_pdf') }}?date=${selectedDate}`;
+        window.location.href = `{{ url_for('export_excel') }}?date=${selectedDate}`;
       }
 
       // Set default date to today

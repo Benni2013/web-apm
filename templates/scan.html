@@ -52,6 +52,19 @@
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 30px;
+            position: relative;
+        }
+
+        .crop-overlay {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 240px;      /* ubah sesuai proporsi yang diinginkan */
+            height: 200px;     /* ubah sesuai proporsi yang diinginkan */
+            transform: translate(-50%, -50%);
+            border: 2px dashed rgba(255,255,255,0.8);
+            border-radius: 50%;    /* buat jadi oval */
+            pointer-events: none;  /* biar tidak mengganggu click/stream */
+            box-sizing: border-box;
         }
         
         #video {
@@ -244,10 +257,14 @@
             <p>Posisikan wajah Anda di depan kamera</p>
         </div>
         
-        <div class="camera-section">
+        <div class="camera-section" style="position: relative;">
+            <!-- video dan canvas tetap ada -->
             <video id="video" width="400" height="300" autoplay></video>
             <canvas id="canvas" width="400" height="300"></canvas>
+            <!-- inilah overlay oval-nya -->
+            <div class="crop-overlay"></div>
         </div>
+
         
         <div class="status-section">
             <div id="status" class="status-indicator status-scanning">
@@ -366,13 +383,13 @@
                         video.srcObject.getTracks().forEach(track => track.stop());
                     }
                 } else {
+                    if (data.message.includes('sudah absen hari ini')) {
+                        scanning = false;                    
+                        clearInterval(scanInterval);
+                        updateStatus('warning', data.message);
+                        return;
+                    }
                     updateStatus('warning', data.message);
-                    // Continue scanning after 2 seconds
-                    setTimeout(() => {
-                        if (scanning) {
-                            updateStatus('scanning', 'Mencari wajah...');
-                        }
-                    }, 2000);
                 }
             })
             .catch(err => {
