@@ -385,5 +385,114 @@ def scan_auto():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
+# Tambahkan route-route ini ke file app.py Anda
+
+@app.route('/members')
+@login_required
+def members():
+    """Halaman daftar semua anggota"""
+    df = pd.read_csv(CSV_FILE)
+    members_data = df.to_dict('records')
+    return render_template('members.html', members=members_data)
+
+@app.route('/add_member', methods=['GET', 'POST'])
+@login_required
+def add_member():
+    """Tambah anggota baru"""
+    if request.method == 'POST':
+        id_ = request.form['id'].strip()
+        name_ = request.form['name'].strip()
+        divisi = request.form['divisi'].strip()
+        
+        if not id_ or not name_ or not divisi:
+            flash('ID, Nama, dan Divisi harus diisi!', 'danger')
+            return render_template('add_member.html')
+        
+        # Cek apakah ID sudah ada
+        df = pd.read_csv(CSV_FILE)
+        if not df.empty and id_ in df['ID'].astype(str).values:
+            flash('ID sudah ada! Gunakan ID yang berbeda.', 'danger')
+            return render_template('add_member.html')
+        
+        # Tambah anggota dengan kolom Divisi
+        new_member = pd.DataFrame([{"ID": id_, "Nama": name_, "Divisi": divisi, "Path Wajah": ""}])
+        df = pd.concat([df, new_member], ignore_index=True)
+        df.to_csv(CSV_FILE, index=False)
+        
+        flash(f'Anggota {name_} berhasil ditambahkan!', 'success')
+        return redirect(url_for('members'))
+    
+    return render_template('add_member.html')
+
+@app.route('/edit_member/<member_id>', methods=['GET', 'POST'])
+@login_required
+def edit_member(member_id):
+    """Edit data anggota"""
+    df = pd.read_csv(CSV_FILE)
+    
+    if df.empty or member_id not in df['ID'].astype(str).values:
+        flash('Anggota tidak ditemukan!', 'danger')
+        return redirect(url_for('members'))
+    
+    member = df[df['ID'].astype(str) == member_id].iloc[0]
+    
+    if request.method == 'POST':
+        new_name = request.form['name'].strip()
+        new_divisi = request.form['divisi'].strip()
+        
+        if not new_name or not new_divisi:
+            flash('Nama dan Divisi harus diisi!', 'danger')
+            return render_template('edit_member.html', member=member)
+        
+        # Update data anggota
+        df.loc[df['ID'].astype(str) == member_id, 'Nama'] = new_name
+        df.loc[df['ID'].astype(str) == member_id, 'Divisi'] = new_divisi
+        df.to_csv(CSV_FILE, index=False)
+        
+        # Update nama di embeddings jika ada
+        if os.path.exists(EMBEDDINGS_FILE):
+            df_e = pd.read_csv(EMBEDDINGS_FILE)
+            if not df_e.empty:
+                df_e.loc[df_e['Nama'] == member['Nama'], 'Nama'] = new_name
+                df_e.to_csv(EMBEDDINGS_FILE, index=False)
+        
+        flash(f'Data anggota berhasil diupdate!', 'success')
+        return redirect(url_for('members'))
+    
+    return render_template('edit_member.html', member=member)
+
+@app.route('/delete_member/<member_id>', methods=['POST'])
+@login_required
+def delete_member(member_id):
+    """Hapus anggota"""
+    df = pd.read_csv(CSV_FILE)
+    
+    if df.empty or member_id not in df['ID'].astype(str).values:
+        flash('Anggota tidak ditemukan!', 'danger')
+        return redirect(url_for('members'))
+    
+    member = df[df['ID'].astype(str) == member_id].iloc[0]
+    member_name = member['Nama']
+    
+    # Hapus dari CSV utama
+    df = df[df['ID'].astype(str) != member_id]
+    df.to_csv(CSV_FILE, index=False)
+    
+    # Hapus dari embeddings
+    if os.path.exists(EMBEDDINGS_FILE):
+        df_e = pd.read_csv(EMBEDDINGS_FILE)
+        if not df_e.empty:
+            df_e = df_e[df_e['Nama'] != member_name]
+            df_e.to_csv(EMBEDDINGS_FILE, index=False)
+    
+    # Hapus folder foto jika ada
+    folder_path = os.path.join(IMAGE_FOLDER, f"{member_id}_{member_name}")
+    if os.path.exists(folder_path):
+        import shutil
+        shutil.rmtree(folder_path)
+    
+    flash(f'Anggota {member_name} berhasil dihapus!', 'success')
+    return redirect(url_for('members'))
+
 if __name__ == '__main__':
     app.run(debug=True)
