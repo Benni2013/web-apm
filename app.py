@@ -13,11 +13,14 @@ import base64
 from flask_sqlalchemy import SQLAlchemy
 import io
 from flask import send_file
+from flask import send_from_directory
+import shutil
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-IMAGE_FOLDER = "data/wajah/"
+basedir = os.path.abspath(os.path.dirname(__file__))
+IMAGE_FOLDER = os.path.join(basedir, 'data', 'wajah')
 CSV_FILE = "data/keterangan.csv"
 USER_JSON = "data/users.json"
 EMBEDDINGS_FILE = "data/embeddings.csv"
@@ -148,36 +151,39 @@ def extract_face_embedding_with_facenet(img):
     return faces[0]['embedding'] if faces else None
 
 def save_face_data_and_embedding(id_, name_, divisi, img):
-    # 1. Simpan file gambar ke disk
-    folder = os.path.join(IMAGE_FOLDER, f"{id_}_{name_}")
-    os.makedirs(folder, exist_ok=True)
-    fn = f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}.jpg"
-    path = os.path.join(folder, fn)
-    cv2.imwrite(path, img)
+     # 1. Simpan file gambar ke disk
+     folder = os.path.join(IMAGE_FOLDER, f"{id_}_{name_}")
+     os.makedirs(folder, exist_ok=True)
+     fn = f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}.jpg"
+     path = os.path.join(folder, fn)
+     cv2.imwrite(path, img)
 
-    # 2. Upsert ke tabel anggota
-    anggota = Anggota.query.get(id_)
-    if not anggota:
-        anggota = Anggota(
-            id_anggota=id_,
-            nama=name_,
-            divisi=divisi,
-            path_wajah=path
-        )
-        db.session.add(anggota)
-    else:
-        anggota.nama        = name_
-        anggota.divisi      = divisi
-        anggota.path_wajah  = path
-    db.session.flush()
+     # Hitung path relatif ke IMAGE_FOLDER (untuk disimpan di DB)
+     rel_path = os.path.relpath(path, IMAGE_FOLDER).replace('\\','/')
 
-    # 3. Extract embedding & simpan ke vektor_wajah
-    embedding = extract_face_embedding_with_facenet(img)
-    if embedding is not None:
-        vw = VektorWajah(id_anggota=id_, vektor=list(map(float, embedding)))
-        db.session.add(vw)
+     # 2. Upsert ke tabel anggota (simpan rel_path, bukan absolute)
+     anggota = Anggota.query.get(id_)
+     if not anggota:
+         anggota = Anggota(
+             id_anggota=id_,
+             nama=name_,
+             divisi=divisi,
+             path_wajah=rel_path
+         )
+         db.session.add(anggota)
+     else:
+         anggota.nama       = name_
+         anggota.divisi     = divisi
+         anggota.path_wajah = rel_path
+     db.session.flush()
 
-    db.session.commit()
+     # 3. Extract embedding & simpan ke vektor_wajah
+     embedding = extract_face_embedding_with_facenet(img)
+     if embedding is not None:
+         vw = VektorWajah(id_anggota=id_, vektor=list(map(float, embedding)))
+         db.session.add(vw)
+
+     db.session.commit()
 
 # FUNGSI ABSENSI
 def save_attendance(id_anggota):
@@ -241,6 +247,12 @@ def login_required(f):
     return decorated_function
 
 # ROUTES
+@app.route('/wajah/<path:filename>')
+@login_required
+def wajah(filename):
+    # kirim file di data/wajah/<filename>
+    return send_from_directory(IMAGE_FOLDER, filename)
+
 @app.route('/')
 def home():
     return redirect(url_for('dashboard'))
@@ -322,7 +334,7 @@ def login():
 def logout():
     session.pop('user', None)
     flash('Logout berhasil.', 'info')
-    return redirect(url_for('login'))
+    return redirect(url_for('dashboard'))
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
@@ -356,7 +368,7 @@ def upload():
                        message=f'Anggota {name_} berhasil ditambahkan!')
 
     # untuk GET, render halaman upload
-    return render_template('upload.html')
+    return render_template('upload.html', username=session.get('user'))
 
 @app.route('/export_excel')
 @login_required
@@ -396,7 +408,7 @@ def export_excel():
 
 @app.route('/scan_auto_page')
 def scan_auto_page():
-    return render_template('scan.html')
+    return render_template('scan.html', username=session.get('user'))
 
 @app.route('/scan_auto', methods=['POST'])
 def scan_auto():
@@ -453,10 +465,26 @@ def scan_auto():
 @app.route('/members')
 @login_required
 def members():
-    """Halaman daftar semua anggota"""
-    df = pd.read_csv(CSV_FILE)
-    members_data = df.to_dict('records')
-    return render_template('members.html', members=members_data)
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # jumlah data per halaman, sesuaikan kebutuhan
+
+    pagination = Anggota.query.paginate(page=page, per_page=per_page, error_out=False)
+    anggota_list = pagination.items
+
+    for m in anggota_list:
+        if m.path_wajah:
+            m.path_rel = m.path_wajah
+            m.display_path = f"data/wajah/{m.path_wajah}"
+        else:
+            m.path_rel = None
+            m.display_path = None
+
+    return render_template(
+        'members.html',
+        members=anggota_list,
+        pagination=pagination,
+        username=session.get('user')
+    )
 
 @app.route('/add_member', methods=['GET', 'POST'])
 @login_required
@@ -490,71 +518,61 @@ def add_member():
 @app.route('/edit_member/<member_id>', methods=['GET', 'POST'])
 @login_required
 def edit_member(member_id):
-    """Edit data anggota"""
-    df = pd.read_csv(CSV_FILE)
-    
-    if df.empty or member_id not in df['ID'].astype(str).values:
+    """Edit data anggota via database"""
+    anggota = Anggota.query.get(member_id)
+    if not anggota:
         flash('Anggota tidak ditemukan!', 'danger')
         return redirect(url_for('members'))
     
-    member = df[df['ID'].astype(str) == member_id].iloc[0]
-    
     if request.method == 'POST':
-        new_name = request.form['name'].strip()
-        new_divisi = request.form['divisi'].strip()
+        new_name = request.form.get('name', '').strip()
+        new_divisi = request.form.get('divisi', '').strip()
         
         if not new_name or not new_divisi:
             flash('Nama dan Divisi harus diisi!', 'danger')
-            return render_template('edit_member.html', member=member)
+            return render_template('edit_member.html', member=anggota)
         
-        # Update data anggota
-        df.loc[df['ID'].astype(str) == member_id, 'Nama'] = new_name
-        df.loc[df['ID'].astype(str) == member_id, 'Divisi'] = new_divisi
-        df.to_csv(CSV_FILE, index=False)
+        # Update atribut anggota
+        old_name = anggota.nama
+        anggota.nama = new_name
+        anggota.divisi = new_divisi
         
-        # Update nama di embeddings jika ada
-        if os.path.exists(EMBEDDINGS_FILE):
-            df_e = pd.read_csv(EMBEDDINGS_FILE)
-            if not df_e.empty:
-                df_e.loc[df_e['Nama'] == member['Nama'], 'Nama'] = new_name
-                df_e.to_csv(EMBEDDINGS_FILE, index=False)
+        # Commit perubahan
+        db.session.commit()
         
-        flash(f'Data anggota berhasil diupdate!', 'success')
+        # Update nama di embeddings, jika ada
+        embeddings = VektorWajah.query.filter_by(id_anggota=member_id).all()
+        for e in embeddings:
+            # Jika kamu simpan nama di embeddings (biasanya ID saja, kalau nama hapus ini)
+            pass  # Biasanya embed simpan ID, jadi tidak perlu update
+        
+        flash('Data anggota berhasil diupdate!', 'success')
         return redirect(url_for('members'))
     
-    return render_template('edit_member.html', member=member)
+    return render_template('edit_member.html', member=anggota)
 
 @app.route('/delete_member/<member_id>', methods=['POST'])
 @login_required
 def delete_member(member_id):
-    """Hapus anggota"""
-    df = pd.read_csv(CSV_FILE)
-    
-    if df.empty or member_id not in df['ID'].astype(str).values:
+    """Hapus anggota beserta seluruh data terkait di database dan filesystem"""
+    # 1. Cari anggota di DB
+    anggota = Anggota.query.get(member_id)
+    if not anggota:
         flash('Anggota tidak ditemukan!', 'danger')
         return redirect(url_for('members'))
-    
-    member = df[df['ID'].astype(str) == member_id].iloc[0]
-    member_name = member['Nama']
-    
-    # Hapus dari CSV utama
-    df = df[df['ID'].astype(str) != member_id]
-    df.to_csv(CSV_FILE, index=False)
-    
-    # Hapus dari embeddings
-    if os.path.exists(EMBEDDINGS_FILE):
-        df_e = pd.read_csv(EMBEDDINGS_FILE)
-        if not df_e.empty:
-            df_e = df_e[df_e['Nama'] != member_name]
-            df_e.to_csv(EMBEDDINGS_FILE, index=False)
-    
-    # Hapus folder foto jika ada
-    folder_path = os.path.join(IMAGE_FOLDER, f"{member_id}_{member_name}")
+
+    nama = anggota.nama
+    # 2. Hapus folder foto (jika ada)
+    folder_name = f"{anggota.id_anggota}_{anggota.nama}"
+    folder_path = os.path.join(IMAGE_FOLDER, folder_name)
     if os.path.exists(folder_path):
-        import shutil
         shutil.rmtree(folder_path)
-    
-    flash(f'Anggota {member_name} berhasil dihapus!', 'success')
+
+    # 3. Hapus record Anggota (cascade will remove vektor_wajah & absen_piket)
+    db.session.delete(anggota)
+    db.session.commit()
+
+    flash(f'Anggota {nama} berhasil dihapus!', 'success')
     return redirect(url_for('members'))
 
 if __name__ == '__main__':

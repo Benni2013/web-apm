@@ -294,6 +294,15 @@
                 <a href="/">Home</a>
                 <a href="/scan_auto_page">Absensi</a>
                 <a href="#anggota">Anggota</a>
+                {% if username %}
+                <!-- Tombol Logout hanya tampil kalau sudah login -->
+                <li class="logout">
+                    <a href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                    </a>
+                </li>
+                {% endif %}
             </nav>
         </div>
     </div>
@@ -308,7 +317,7 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="id">ID Anggota</label>
-                        <input type="text" id="id" name="id" placeholder="ID" required />
+                        <input type="text" id="id" name="id" placeholder="ID" required autofocus/>
                     </div>
                     <div class="form-group">
                         <label for="name">Nama Anggota</label>
@@ -337,7 +346,7 @@
 
                 <div class="btn-container">
                     <button type="submit" class="btn btn-primary submit-btn">Upload</button>
-                    <a href="#home" class="btn btn-secondary back-link">Kembali ke Home</a>
+                    <a href="/dashboard" class="btn btn-secondary back-link">Kembali ke Home</a>
                 </div>
             </form>
         </div>
