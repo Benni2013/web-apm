@@ -150,40 +150,69 @@ def extract_face_embedding_with_facenet(img):
     faces = embedder.extract(face_img, threshold=0.95)
     return faces[0]['embedding'] if faces else None
 
+
 def save_face_data_and_embedding(id_, name_, divisi, img):
-     # 1. Simpan file gambar ke disk
-     folder = os.path.join(IMAGE_FOLDER, f"{id_}_{name_}")
-     os.makedirs(folder, exist_ok=True)
-     fn = f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}.jpg"
-     path = os.path.join(folder, fn)
-     cv2.imwrite(path, img)
+    # 1. Simpan file gambar ke disk (HANYA 1 FOTO)
+    folder = os.path.join(IMAGE_FOLDER, f"{id_}_{name_}")
+    os.makedirs(folder, exist_ok=True)
+    fn = f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}.jpg"
+    path = os.path.join(folder, fn)
+    cv2.imwrite(path, img)
 
-     # Hitung path relatif ke IMAGE_FOLDER (untuk disimpan di DB)
-     rel_path = os.path.relpath(path, IMAGE_FOLDER).replace('\\','/')
+    # Hitung path relatif ke IMAGE_FOLDER (untuk disimpan di DB)
+    rel_path = os.path.relpath(path, IMAGE_FOLDER).replace('\\','/')
 
-     # 2. Upsert ke tabel anggota (simpan rel_path, bukan absolute)
-     anggota = Anggota.query.get(id_)
-     if not anggota:
-         anggota = Anggota(
-             id_anggota=id_,
-             nama=name_,
-             divisi=divisi,
-             path_wajah=rel_path
-         )
-         db.session.add(anggota)
-     else:
-         anggota.nama       = name_
-         anggota.divisi     = divisi
-         anggota.path_wajah = rel_path
-     db.session.flush()
+    # 2. Upsert ke tabel anggota (simpan rel_path, bukan absolute)
+    anggota = Anggota.query.get(id_)
+    if not anggota:
+        anggota = Anggota(
+            id_anggota=id_,
+            nama=name_,
+            divisi=divisi,
+            path_wajah=rel_path
+        )
+        db.session.add(anggota)
+    else:
+        anggota.nama       = name_
+        anggota.divisi     = divisi
+        anggota.path_wajah = rel_path
+    db.session.flush()
 
-     # 3. Extract embedding & simpan ke vektor_wajah
-     embedding = extract_face_embedding_with_facenet(img)
-     if embedding is not None:
-         vw = VektorWajah(id_anggota=id_, vektor=list(map(float, embedding)))
-         db.session.add(vw)
+    # 3. Hapus semua vektor lama untuk anggota ini
+    VektorWajah.query.filter_by(id_anggota=id_).delete()
+    
+    # 4. Extract embedding dari foto yang disimpan & simpan ke vektor_wajah
+    embedding = extract_face_embedding_with_facenet(img)
+    if embedding is not None:
+        vw = VektorWajah(id_anggota=id_, vektor=list(map(float, embedding)))
+        db.session.add(vw)
 
-     db.session.commit()
+    db.session.commit()
+    
+def save_multiple_face_vectors(id_, vectors_data):
+    """
+    Simpan multiple vektor wajah ke database
+    vectors_data: list of embedding arrays
+    """
+    try:
+        # Hapus semua vektor lama untuk anggota ini
+        VektorWajah.query.filter_by(id_anggota=id_).delete()
+        
+        # Simpan semua vektor baru
+        for vector in vectors_data:
+            if vector is not None and len(vector) > 0:
+                vw = VektorWajah(
+                    id_anggota=id_, 
+                    vektor=list(map(float, vector))
+                )
+                db.session.add(vw)
+        
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving vectors: {str(e)}")
+        return False
 
 # FUNGSI ABSENSI
 def save_attendance(id_anggota):
@@ -346,6 +375,7 @@ def upload():
         nama          = data.get('name', '').strip()
         divisi        = data.get('divisi', '').strip()
         webcam_image  = data.get('webcam_image', '')
+        face_vectors  = data.get('face_vectors', [])  # Array of base64 images
 
         # 2) Validasi input wajib
         if not id_anggota or not nama or not divisi:
@@ -373,9 +403,34 @@ def upload():
             return jsonify(success=False,
                            message='Format gambar tidak valid!')
 
-        # 5) Simpan data wajah & embedding
+        # 5) Simpan foto utama dan data anggota
         save_face_data_and_embedding(id_anggota, nama, divisi, img)
-
+        
+        # 6) Proses dan simpan multiple vectors jika ada
+        if face_vectors and len(face_vectors) > 0:
+            vectors_data = []
+            for vector_image in face_vectors:
+                try:
+                    if vector_image:
+                        header, encoded = vector_image.split(',', 1)
+                        img_bytes = base64.b64decode(encoded)
+                        nparr = np.frombuffer(img_bytes, np.uint8)
+                        vector_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                        
+                        # Extract embedding
+                        embedding = extract_face_embedding_with_facenet(vector_img)
+                        if embedding is not None:
+                            vectors_data.append(embedding)
+                except Exception as e:
+                    print(f"Error processing vector {len(vectors_data)}: {str(e)}")
+                    continue
+            
+            # Simpan semua vectors ke database
+            if vectors_data:
+                save_multiple_face_vectors(id_anggota, vectors_data)
+                return jsonify(success=True,
+                               message=f'Anggota {nama} berhasil ditambahkan dengan {len(vectors_data)} vektor wajah!')
+        
         return jsonify(success=True,
                        message=f'Anggota {nama} berhasil ditambahkan!')
 
@@ -438,43 +493,49 @@ def scan_auto():
         if test_embedding is None:
             return jsonify({'success': False, 'message': 'Tidak terdeteksi wajah.'})
         
-        df = pd.read_csv(EMBEDDINGS_FILE)
-        if df.empty or len(df) == 0:
+        # Ambil semua vektor dari database
+        vectors = VektorWajah.query.all()
+        if not vectors:
             return jsonify({'success': False, 'message': 'Dataset kosong.'})
         
-        names = df["Nama"].values
-        embeddings = df.drop(columns=["Nama"]).values.astype(float)
-        sims = cosine_similarity([test_embedding], embeddings)
-        best_idx = np.argmax(sims)
-        best_score = sims[0][best_idx]
+        best_match = None
+        best_score = 0
         
-        if best_score > 0.7:
-            # di scan_auto, setelah best_score > threshold
-            name = names[best_idx]
-            anggota = Anggota.query.filter_by(nama=name).first()
-            if not anggota:
-                # nama ada di embeddings.csv tapi belum tercatat di anggota DB
-                return jsonify({'success': False, 'message': 'Wajah tidak dikenal'})
-            success, message = save_attendance(anggota.id_anggota)
-            if success:
-                return jsonify({
-                    'success': True, 
-                    'message': f'Selamat datang, {name}!',
-                    'name': name,
-                    'confidence': f'{best_score:.2f}'
-                })
-            else:
-                return jsonify({
-                    'success': False, 
-                    'message': message,
-                    'name': name
-                })
-        else:
-            return jsonify({'success': False, 'message': 'Wajah tidak dikenal'})
+        for vector_row in vectors:
+            try:
+                stored_embedding = vector_row.vektor
+                if stored_embedding and len(stored_embedding) > 0:
+                    similarity = cosine_similarity([test_embedding], [stored_embedding])[0][0]
+                    if similarity > best_score:
+                        best_score = similarity
+                        best_match = vector_row.id_anggota
+            except Exception as e:
+                print(f"Error processing vector: {str(e)}")
+                continue
+        
+        if best_score > 0.7 and best_match:
+            anggota = Anggota.query.get(best_match)
+            if anggota:
+                success, message = save_attendance(anggota.id_anggota)
+                if success:
+                    return jsonify({
+                        'success': True, 
+                        'message': f'Selamat datang, {anggota.nama}!',
+                        'name': anggota.nama,
+                        'confidence': f'{best_score:.2f}'
+                    })
+                else:
+                    return jsonify({
+                        'success': False, 
+                        'message': message,
+                        'name': anggota.nama
+                    })
+        
+        return jsonify({'success': False, 'message': 'Wajah tidak dikenal'})
+        
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
-# Tambahkan route-route ini ke file app.py Anda
 
 @app.route('/members')
 @login_required
@@ -503,7 +564,7 @@ def members():
 @app.route('/add_member', methods=['GET', 'POST'])
 @login_required
 def add_member():
-    """Tambah anggota baru"""
+    """Tambah anggota baru ke database"""
     if request.method == 'POST':
         id_ = request.form['id'].strip()
         name_ = request.form['name'].strip()
@@ -513,21 +574,34 @@ def add_member():
             flash('ID, Nama, dan Divisi harus diisi!', 'danger')
             return render_template('add_member.html')
         
-        # Cek apakah ID sudah ada
-        df = pd.read_csv(CSV_FILE)
-        if not df.empty and id_ in df['ID'].astype(str).values:
-            flash('ID sudah ada! Gunakan ID yang berbeda.', 'danger')
+        try:
+            # Cek apakah ID sudah ada di database
+            existing_anggota = Anggota.query.get(id_)
+            if existing_anggota:
+                flash('ID sudah ada! Gunakan ID yang berbeda.', 'danger')
+                return render_template('add_member.html')
+            
+            # Tambah anggota baru ke database
+            new_anggota = Anggota(
+                id_anggota=id_,
+                nama=name_,
+                divisi=divisi,
+                path_wajah=""  # Path kosong, akan diisi saat upload foto
+            )
+            db.session.add(new_anggota)
+            db.session.commit()
+            
+            flash(f'Anggota {name_} berhasil ditambahkan!', 'success')
+            return redirect(url_for('members'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error menambah anggota: {str(e)}', 'danger')
             return render_template('add_member.html')
-        
-        # Tambah anggota dengan kolom Divisi
-        new_member = pd.DataFrame([{"ID": id_, "Nama": name_, "Divisi": divisi, "Path Wajah": ""}])
-        df = pd.concat([df, new_member], ignore_index=True)
-        df.to_csv(CSV_FILE, index=False)
-        
-        flash(f'Anggota {name_} berhasil ditambahkan!', 'success')
-        return redirect(url_for('members'))
     
-    return render_template('add_member.html')
+    # return render_template('add_member.html')
+    return redirect(url_for('members'))  # Redirect ke halaman anggota jika GET
+
 
 @app.route('/edit_member/<member_id>', methods=['GET', 'POST'])
 @login_required
@@ -568,26 +642,56 @@ def edit_member(member_id):
 @app.route('/delete_member/<member_id>', methods=['POST'])
 @login_required
 def delete_member(member_id):
-    """Hapus anggota beserta seluruh data terkait di database dan filesystem"""
-    # 1. Cari anggota di DB
-    anggota = Anggota.query.get(member_id)
-    if not anggota:
-        flash('Anggota tidak ditemukan!', 'danger')
-        return redirect(url_for('members'))
+    """Hapus anggota dari database (folder foto dibiarkan untuk pembersihan manual)"""
+    try:
+        # 1. Cari anggota di DB
+        anggota = Anggota.query.get(member_id)
+        if not anggota:
+            flash('Anggota tidak ditemukan!', 'danger')
+            return redirect(url_for('members'))
 
-    nama = anggota.nama
-    # 2. Hapus folder foto (jika ada)
-    folder_name = f"{anggota.id_anggota}_{anggota.nama}"
-    folder_path = os.path.join(IMAGE_FOLDER, folder_name)
-    if os.path.exists(folder_path):
-        shutil.rmtree(folder_path)
-
-    # 3. Hapus record Anggota (cascade will remove vektor_wajah & absen_piket)
-    db.session.delete(anggota)
-    db.session.commit()
-
-    flash(f'Anggota {nama} berhasil dihapus!', 'success')
+        nama = anggota.nama
+        
+        # 2. Hapus dari database (CASCADE akan menghapus data terkait)
+        db.session.delete(anggota)
+        db.session.commit()
+        
+        # 3. Coba hapus folder foto (optional - tidak akan error jika gagal)
+        try:
+            folder_name = f"{member_id}_{nama}"
+            folder_path = os.path.join(IMAGE_FOLDER, folder_name)
+            
+            if os.path.exists(folder_path):
+                # Ganti nama folder dengan prefix "_DELETED_" jika tidak bisa dihapus
+                import time
+                timestamp = int(time.time())
+                new_name = f"_DELETED_{timestamp}_{folder_name}"
+                new_path = os.path.join(IMAGE_FOLDER, new_name)
+                
+                try:
+                    shutil.rmtree(folder_path)
+                    folder_msg = " Folder foto juga berhasil dihapus."
+                except:
+                    try:
+                        os.rename(folder_path, new_path)
+                        folder_msg = " Folder foto ditandai untuk penghapusan manual."
+                    except:
+                        folder_msg = " Folder foto tidak dapat dihapus (silakan hapus manual)."
+            else:
+                folder_msg = ""
+                
+        except Exception as folder_error:
+            folder_msg = f" (Folder foto: {str(folder_error)})"
+        
+        flash(f'Anggota {nama} berhasil dihapus dari database!{folder_msg}', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error dalam delete_member: {str(e)}")
+        flash(f'Error menghapus anggota: {str(e)}', 'danger')
+    
     return redirect(url_for('members'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

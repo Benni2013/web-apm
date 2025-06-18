@@ -85,17 +85,130 @@
             color: #0d47a1;
             text-decoration: underline;
         }
-        /* Flash message styling */
-        ul { list-style: none; padding: 0; }
-        li { color: #e53935; margin-bottom: 8px; font-size: 0.95rem; }
+        
+        /* Enhanced Flash message styling with animations */
+        .flash-messages {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0;
+        }
+        
+        .flash-message {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            position: relative;
+            animation: slideInDown 0.4s ease;
+            transition: all 0.3s ease;
+        }
+        
+        .flash-message.error {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            color: #c62828;
+            border-left: 4px solid #e53935;
+        }
+        
+        .flash-message.success {
+            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .flash-message.warning {
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            color: #ef6c00;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .flash-message.info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #1565c0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        /* Progress bar untuk countdown */
+        .flash-message::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(0, 0, 0, 0.3);
+            animation: countdown 5s linear;
+        }
+        
+        .flash-message.error::after {
+            background: #e53935;
+        }
+        
+        .flash-message.success::after {
+            background: #4caf50;
+        }
+        
+        .flash-message.warning::after {
+            background: #ff9800;
+        }
+        
+        .flash-message.info::after {
+            background: #2196f3;
+        }
+        
+        /* Close button */
+        .flash-close {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .flash-close:hover {
+            opacity: 1;
+        }
+        
+        /* Animations */
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes countdown {
+            from {
+                width: 100%;
+            }
+            to {
+                width: 0%;
+            }
+        }
+        
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+        
+        .flash-message.fade-out {
+            animation: fadeOut 0.3s ease forwards;
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
         <div class="login-logo">
-            <!-- Pakai logo PNG sendiri -->
-            <!-- <img src="{{ url_for('static', filename='b332e2b1-1d52-4334-b5c6-efa9ae65c941.png') }}" alt="RDBI Logo"> -->
-            <!-- Atau pakai emoji/globe sementara -->
             <img src="/static/images/rdbi.png" alt="Logo" />
         </div>
         <div class="login-title">RDBI</div>
@@ -112,13 +225,84 @@
 
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <ul>
+            <ul class="flash-messages" id="flashMessages">
             {% for category, message in messages %}
-                <li>{{ message }}</li>
+                <li class="flash-message {{ 'error' if category == 'danger' else category }}" data-category="{{ category }}">
+                    <span class="flash-close" onclick="closeFlashMessage(this)">&times;</span>
+                    {{ message }}
+                </li>
             {% endfor %}
             </ul>
         {% endif %}
         {% endwith %}
     </div>
+
+    <script>
+        // Auto-hide flash messages after 5 seconds
+        function autoHideFlashMessages() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            
+            flashMessages.forEach((message, index) => {
+                // Set timeout untuk setiap message (dengan sedikit delay antar message)
+                setTimeout(() => {
+                    if (message && message.parentNode) {
+                        // Add fade out animation
+                        message.classList.add('fade-out');
+                        
+                        // Remove element after animation completes
+                        setTimeout(() => {
+                            if (message.parentNode) {
+                                message.parentNode.removeChild(message);
+                                
+                                // Hide container if no messages left
+                                const container = document.getElementById('flashMessages');
+                                if (container && container.children.length === 0) {
+                                    container.style.display = 'none';
+                                }
+                            }
+                        }, 300); // Wait for fade-out animation to complete
+                    }
+                }, 5000 + (index * 100)); // 5 seconds + small delay between messages
+            });
+        }
+        
+        // Manual close function
+        function closeFlashMessage(closeButton) {
+            const message = closeButton.parentNode;
+            message.classList.add('fade-out');
+            
+            setTimeout(() => {
+                if (message.parentNode) {
+                    message.parentNode.removeChild(message);
+                    
+                    // Hide container if no messages left
+                    const container = document.getElementById('flashMessages');
+                    if (container && container.children.length === 0) {
+                        container.style.display = 'none';
+                    }
+                }
+            }, 300);
+        }
+        
+        // Initialize auto-hide when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            autoHideFlashMessages();
+        });
+        
+        // Optional: Pause countdown on hover
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            
+            flashMessages.forEach(message => {
+                message.addEventListener('mouseenter', function() {
+                    this.style.animationPlayState = 'paused';
+                });
+                
+                message.addEventListener('mouseleave', function() {
+                    this.style.animationPlayState = 'running';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
