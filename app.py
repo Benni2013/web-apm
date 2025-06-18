@@ -190,24 +190,24 @@ def save_face_data_and_embedding(id_, name_, divisi, img):
     path = os.path.join(folder, fn)
     cv2.imwrite(path, img)
 
-     # Hitung path relatif ke IMAGE_FOLDER (untuk disimpan di DB)
-     rel_path = os.path.relpath(path, IMAGE_FOLDER).replace('\\','/')
+    # Hitung path relatif ke IMAGE_FOLDER (untuk disimpan di DB)
+    rel_path = os.path.relpath(path, IMAGE_FOLDER).replace('\\','/')
 
-     # 2. Upsert ke tabel anggota (simpan rel_path, bukan absolute)
-     anggota = Anggota.query.get(id_)
-     if not anggota:
-         anggota = Anggota(
-             id_anggota=id_,
-             nama=name_,
-             divisi=divisi,
-             path_wajah=rel_path
-         )
-         db.session.add(anggota)
-     else:
-         anggota.nama       = name_
-         anggota.divisi     = divisi
-         anggota.path_wajah = rel_path
-     db.session.flush()
+    # 2. Upsert ke tabel anggota (simpan rel_path, bukan absolute)
+    anggota = Anggota.query.get(id_)
+    if not anggota:
+        anggota = Anggota(
+            id_anggota=id_,
+            nama=name_,
+            divisi=divisi,
+            path_wajah=rel_path
+        )
+        db.session.add(anggota)
+    else:
+        anggota.nama       = name_
+        anggota.divisi     = divisi
+        anggota.path_wajah = rel_path
+    db.session.flush()
 
     # 3. Hapus semua vektor lama untuk anggota ini
     VektorWajah.query.filter_by(id_anggota=id_).delete()
