@@ -1,0 +1,125 @@
+<nav class="navbar">
+  <div class="nav-container">
+    <div class="logo">
+      <div class="logo-icon">
+        <img src="{{ url_for('static', filename='images/rdbi.png') }}" alt="Logo" class="logo-image">
+      </div>
+      <div class="logo-text">
+        <h1 class="logo-title">RDBI</h1>
+        <p class="logo-subtitle">Relational Data dan Business Intelligence</p>
+      </div>
+    </div>
+    <ul class="nav-menu">
+      <li><a href="{{ url_for('dashboard') }}" class="{% if 'dashboard' in request.path %}active{% endif %}">Home</a></li>
+      <li><a href="{{ url_for('scan_auto_page') }}" class="{% if 'scan' in request.path %}active{% endif %}">Absensi</a></li>
+      <li><a href="{{ url_for('members') }}" class="{% if 'members' in request.path %}active{% endif %}">Anggota</a></li>
+    </ul>
+    {% if username %}
+    <ul class="nav-menu">
+      <li class="logout">
+        <a href="{{ url_for('logout') }}">
+          <i class="fas fa-sign-out-alt"></i>
+        </a>
+      </li>
+    </ul>
+    {% endif %}
+  </div>
+</nav>
+
+<style>
+.navbar {
+  background: linear-gradient(to right, #4a90e2 0%, #357abd);
+  padding: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.nav-container {
+  max-width: 1300px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.logo-image {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.logo-text .logo-title {
+  color: white;
+  font-weight: 700;
+  font-size: 20px;
+  margin: 0;
+}
+
+.logo-text .logo-subtitle {
+  color: white;
+  font-size: 11px;
+  margin: 0;
+  opacity: 0.85;
+}
+
+.nav-menu {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 6px;
+}
+
+.nav-menu li a {
+  color: white;
+  text-decoration: none;
+  padding: 12px 20px;
+  font-weight: 500;
+  border-radius: 12px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.nav-menu li a.active,
+.nav-menu li a:hover {
+  background-color: rgba(255,255,255,0.25);
+}
+
+.nav-menu li.logout a {
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 16px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.nav-menu li.logout a:hover {
+  background-color: white;
+  color: #357abd;
+}
+</style>
