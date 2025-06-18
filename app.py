@@ -342,33 +342,47 @@ def upload():
     if request.method == 'POST':
         # 1) Parse JSON payload
         data = request.get_json() or {}
-        id_           = data.get('id', '').strip()
-        name_         = data.get('name', '').strip()
+        id_anggota    = data.get('id', '').strip()
+        nama          = data.get('name', '').strip()
         divisi        = data.get('divisi', '').strip()
         webcam_image  = data.get('webcam_image', '')
 
-        # 2) Validasi input
-        if not id_ or not name_ or not divisi:
+        # 2) Validasi input wajib
+        if not id_anggota or not nama or not divisi:
             return jsonify(success=False,
                            message='ID, Nama, dan Divisi harus diisi!')
 
-        # 3) Decode gambar dari base64
-        if webcam_image:
+        # 3) Cek duplikat ID anggota
+        existing = Anggota.query.filter_by(id_anggota=id_anggota).first()
+        if existing:
+            return jsonify(success=False,
+                           message=f'ID anggota "{id_anggota}" sudah terdaftar!')
+
+        # 4) Decode gambar dari Base64
+        if not webcam_image:
+            return jsonify(success=False,
+                           message='Silakan ambil foto sebelum submit!')
+        try:
             header, encoded = webcam_image.split(',', 1)
             img_bytes = base64.b64decode(encoded)
             nparr = np.frombuffer(img_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        else:
+            if img is None:
+                raise ValueError("Decode gagal")
+        except Exception:
             return jsonify(success=False,
-                           message='Silakan ambil foto sebelum submit!')
+                           message='Format gambar tidak valid!')
 
-        # 4) Simpan ke DB + embedding
-        save_face_data_and_embedding(id_, name_, divisi, img)
+        # 5) Simpan data wajah & embedding
+        save_face_data_and_embedding(id_anggota, nama, divisi, img)
+
         return jsonify(success=True,
-                       message=f'Anggota {name_} berhasil ditambahkan!')
+                       message=f'Anggota {nama} berhasil ditambahkan!')
 
-    # untuk GET, render halaman upload
-    return render_template('upload.html', username=session.get('user'))
+    # GET: render halaman upload.html
+    return render_template('upload.html',
+                           username=session.get('user'))
+
 
 @app.route('/export_excel')
 @login_required
