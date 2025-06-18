@@ -318,7 +318,7 @@
                         <label for="divisi">Divisi</label>
                         <input type="text" id="divisi" name="divisi" placeholder="Divisi" required />
                     </div>
-                    <div class="form-group">
+                    <!-- <div class="form-group">
                         <label>Foto Anggota</label>
                         <div class="camera-section">
                             <video id="video" width="320" height="240" autoplay></video>
@@ -327,6 +327,33 @@
 
                             <div class="camera-controls">
                                 <button type="button" id="snap" class="btn btn-primary">Ambil Foto</button>
+                                <button type="button" id="retake" class="btn btn-secondary" style="display: none;">Foto Ulang</button>
+                            </div>
+
+                            <input type="hidden" name="webcam_image" id="webcam_image"/>
+                        </div>
+                    </div> -->
+                    <div class="form-group">
+                        <label>Foto Anggota</label>
+                        <div class="camera-section">
+                            <!-- Progress counter di atas kamera -->
+                            <div id="capture-progress" style="display: none; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; background: rgba(79, 99, 210, 0.9); color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 1.1em;">
+                                Mengambil gambar: <span id="progress-count">0</span>/20
+                            </div>
+                            
+                            <!-- Live feed indicator -->
+                            <div id="live-indicator" style="position: absolute; top: 10px; right: 10px; z-index: 10; background: rgba(255, 0, 0, 0.8); color: white; padding: 4px 8px; border-radius: 10px; font-size: 0.8em; display: none;">
+                                🔴 LIVE
+                            </div>
+                            
+                            <div style="position: relative; display: inline-block;">
+                                <video id="video" width="320" height="240" autoplay></video>
+                                <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
+                                <img id="preview" class="photo-preview" alt="Preview"/>
+                            </div>
+
+                            <div class="camera-controls">
+                                <button type="button" id="snap" class="btn btn-primary">Ambil Foto & Vektor</button>
                                 <button type="button" id="retake" class="btn btn-secondary" style="display: none;">Foto Ulang</button>
                             </div>
 
@@ -344,7 +371,7 @@
     </div>
 
     <!-- SCRIPT -->
-    <script>
+    <!-- <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const snap = document.getElementById('snap');
@@ -461,6 +488,351 @@
                 messages.innerHTML = '';
             }, 4000);
         }
+    </script> -->
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const snap = document.getElementById('snap');
+        const retake = document.getElementById('retake');
+        const webcam_image = document.getElementById('webcam_image');
+        const preview = document.getElementById('preview');
+        const form = document.getElementById('uploadForm');
+        const messages = document.getElementById('messages');
+        const progressDiv = document.getElementById('capture-progress');
+        const progressCount = document.getElementById('progress-count');
+        const liveIndicator = document.getElementById('live-indicator');
+
+        let capturedVectors = []; // Array untuk menyimpan multiple vectors
+        let isCapturing = false;
+        let captureInterval = null;
+
+        // Aktifkan kamera
+        let stream = null;
+        navigator.mediaDevices?.getUserMedia({ 
+            video: { 
+                width: 320, 
+                height: 240,
+                facingMode: 'user' // Gunakan kamera depan
+            } 
+        })
+        .then(mediaStream => {
+            video.srcObject = mediaStream;
+            stream = mediaStream;
+            showMessage('Kamera berhasil diaktifkan! Posisikan wajah Anda di depan kamera.', 'success');
+            liveIndicator.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Kamera tidak dapat diakses:', error);
+            showMessage(`Tidak dapat mengakses kamera: ${error.message}`, 'error');
+        });
+
+        // Fungsi untuk mendeteksi gerakan (opsional - untuk feedback visual)
+        let lastFrame = null;
+        let motionDetected = false;
+        
+        function detectMotion() {
+            if (!video.videoWidth || !video.videoHeight) return;
+            
+            const motionCanvas = document.createElement('canvas');
+            motionCanvas.width = 100; // Resolusi kecil untuk deteksi gerakan
+            motionCanvas.height = 75;
+            const motionCtx = motionCanvas.getContext('2d');
+            
+            motionCtx.drawImage(video, 0, 0, 100, 75);
+            const currentFrame = motionCtx.getImageData(0, 0, 100, 75);
+            
+            if (lastFrame) {
+                let diff = 0;
+                for (let i = 0; i < currentFrame.data.length; i += 4) {
+                    const r = Math.abs(currentFrame.data[i] - lastFrame.data[i]);
+                    const g = Math.abs(currentFrame.data[i + 1] - lastFrame.data[i + 1]);
+                    const b = Math.abs(currentFrame.data[i + 2] - lastFrame.data[i + 2]);
+                    diff += (r + g + b);
+                }
+                
+                motionDetected = diff > 30000; // Threshold untuk deteksi gerakan
+                
+                // Update border video berdasarkan gerakan
+                if (isCapturing) {
+                    if (motionDetected) {
+                        video.style.border = '3px solid #4CAF50'; // Hijau = gerakan terdeteksi
+                    } else {
+                        video.style.border = '3px solid #FF9800'; // Oranye = tidak ada gerakan
+                    }
+                }
+            }
+            
+            lastFrame = currentFrame;
+        }
+        
+        // Jalankan deteksi gerakan setiap 100ms
+        setInterval(detectMotion, 100);
+
+        // Fungsi untuk capture multiple frames dengan feedback real-time
+        function captureMultipleFrames() {
+            return new Promise((resolve) => {
+                const vectors = [];
+                const maxFrames = 20;
+                const captureDelay = 250; // 250ms antar capture
+                
+                let frameCount = 0;
+                progressDiv.style.display = 'block';
+                video.style.border = '3px solid #2196F3'; // Biru = sedang capture
+                
+                showMessage('Mulai menggerakkan wajah Anda perlahan...', 'info');
+                
+                const captureFrame = () => {
+                    if (frameCount >= maxFrames) {
+                        progressDiv.style.display = 'none';
+                        video.style.border = '3px solid #4F63D2'; // Kembali ke warna normal
+                        resolve(vectors);
+                        return;
+                    }
+                    
+                    // Capture frame
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                    
+                    const dataURL = tempCanvas.toDataURL('image/jpeg', 0.8);
+                    vectors.push(dataURL);
+                    frameCount++;
+                    
+                    // Update progress counter
+                    progressCount.textContent = frameCount;
+                    
+                    // Update progress message dengan tips gerakan
+                    const tips = [
+                        'Gerakkan kepala ke kiri...',
+                        'Gerakkan kepala ke kanan...',
+                        'Lihat sedikit ke atas...',
+                        'Lihat sedikit ke bawah...',
+                        'Putar kepala perlahan...',
+                        'Tetap di tengah...',
+                        'Senyum sedikit...',
+                        'Ekspresi normal...',
+                        'Gerakkan mata...',
+                        'Hampir selesai...'
+                    ];
+                    
+                    const tipIndex = Math.floor((frameCount - 1) / 2) % tips.length;
+                    showMessage(`${tips[tipIndex]} (${frameCount}/${maxFrames})`, 'info');
+                    
+                    // Visual feedback pada progress
+                    const progressPercent = (frameCount / maxFrames) * 100;
+                    progressDiv.style.background = `linear-gradient(90deg, #4CAF50 ${progressPercent}%, rgba(79, 99, 210, 0.9) ${progressPercent}%)`;
+                    
+                    setTimeout(captureFrame, captureDelay);
+                };
+                
+                // Mulai capture setelah countdown
+                let countdown = 3;
+                const countdownInterval = setInterval(() => {
+                    if (countdown > 0) {
+                        showMessage(`Bersiap... ${countdown}`, 'info');
+                        countdown--;
+                    } else {
+                        clearInterval(countdownInterval);
+                        captureFrame();
+                    }
+                }, 1000);
+            });
+        }
+
+        // Ambil foto utama + multiple vectors
+        snap.addEventListener('click', async function (e) {
+            e.preventDefault();
+            
+            if (isCapturing) return;
+            isCapturing = true;
+            
+            try {
+                // 1. Ambil foto utama untuk preview
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataURL = canvas.toDataURL('image/jpeg', 0.95);
+                webcam_image.value = dataURL;
+
+                preview.src = dataURL;
+                preview.style.display = "block";
+                
+                showMessage('Foto utama berhasil diambil! Bersiap mengambil vektor wajah...', 'success');
+                
+                // 2. Capture multiple vectors dalam mode real-time
+                capturedVectors = await captureMultipleFrames();
+                
+                // 3. Selesai - sembunyikan video, tampilkan preview
+                video.style.display = "none";
+                snap.style.display = "none";
+                retake.style.display = "inline-block";
+                liveIndicator.style.display = 'none';
+                
+                showMessage(`Berhasil mengambil ${capturedVectors.length} vektor wajah! Siap untuk diunggah.`, 'success');
+                
+            } catch (error) {
+                showMessage('Error saat mengambil vektor wajah: ' + error.message, 'error');
+                progressDiv.style.display = 'none';
+                video.style.border = '3px solid #4F63D2';
+            } finally {
+                isCapturing = false;
+            }
+        });
+
+        // Foto ulang
+        retake.addEventListener('click', function (e) {
+            e.preventDefault();
+            preview.style.display = "none";
+            video.style.display = "block";
+            snap.style.display = "inline-block";
+            retake.style.display = "none";
+            webcam_image.value = "";
+            capturedVectors = []; // Reset vectors
+            progressDiv.style.display = 'none';
+            progressCount.textContent = '0';
+            video.style.border = '3px solid #4F63D2';
+            liveIndicator.style.display = 'block';
+            showMessage('Silakan ambil foto ulang. Posisikan wajah Anda di depan kamera.', 'info');
+        });
+
+        // Kirim data
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById('id').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const divisi = document.getElementById('divisi').value.trim();
+            const image = webcam_image.value.trim();
+
+            if (!id || !name || !divisi) {
+                showMessage('Semua field harus diisi!', 'error');
+                return;
+            }
+
+            if (!image) {
+                showMessage('Silakan ambil foto terlebih dahulu!', 'error');
+                return;
+            }
+
+            if (capturedVectors.length === 0) {
+                showMessage('Vektor wajah belum diambil! Silakan ambil foto ulang.', 'error');
+                return;
+            }
+
+            showMessage('Mengunggah data dan vektor wajah...', 'info');
+
+            // Kirim data dengan multiple vectors
+            const formData = {
+                id,
+                name,
+                divisi,
+                webcam_image: image,
+                face_vectors: capturedVectors // Kirim semua vectors
+            };
+
+            // Kirim ke backend
+            fetch('/upload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Data anggota berhasil diunggah!', 'success');
+                    form.reset();
+                    preview.style.display = "none";
+                    video.style.display = "block";
+                    snap.style.display = "inline-block";
+                    retake.style.display = "none";
+                    webcam_image.value = "";
+                    capturedVectors = [];
+                    progressDiv.style.display = 'none';
+                    progressCount.textContent = '0';
+                    video.style.border = '3px solid #4F63D2';
+                    liveIndicator.style.display = 'block';
+                } else {
+                    showMessage(data.message || 'Gagal mengunggah data.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Kesalahan saat mengirim data:', error);
+                showMessage('Terjadi kesalahan saat mengirim data.', 'error');
+            });
+        });
+
+        // Fungsi menampilkan pesan dengan kategori yang berbeda
+        function showMessage(message, type) {
+            const alertClass = type === 'success' ? 'success-message' : 
+                              type === 'info' ? 'info-message' : 'error-message';
+            
+            messages.innerHTML = `
+                <div class="${alertClass}">
+                    ${message}
+                </div>
+            `;
+
+            if (type !== 'info') {
+                setTimeout(() => {
+                    messages.innerHTML = '';
+                }, 4000);
+            }
+        }
+
+        // Cleanup saat page unload
+        window.addEventListener('beforeunload', function() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
     </script>
+
+    <style>
+        /* Update style untuk progress indicator */
+        .info-message {
+            background: linear-gradient(135deg, #4ECDC4 0%, #36B9CC 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        /* Style untuk progress counter */
+        #capture-progress {
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+        
+        /* Style untuk live indicator */
+        #live-indicator {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* Responsive video container */
+        .camera-section {
+            position: relative;
+        }
+        
+        /* Enhanced video styling */
+        #video {
+            transition: border-color 0.3s ease;
+        }
+    </style>
 </body>
 </html>

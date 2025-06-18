@@ -86,10 +86,20 @@
                 <i class="fas fa-chart-line me-2"></i>RDBI
                 <small class="d-block" style="font-size: 0.7em; font-weight: normal;">Rekayasa Data dan Business Intelligence</small>
             </a>
-            <div class="navbar-nav ms-auto">
+            <!-- <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="{{ url_for('home') }}">Home</a>
                 <a class="nav-link" href="#">Absensi</a>
                 <a class="nav-link active" href="{{ url_for('members') }}">Anggota</a>
+            </div> -->
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('dashboard') }}">Home</a>
+                <a class="nav-link" href="{{ url_for('scan_auto_page') }}">Absensi</a>
+                <a class="nav-link active" href="{{ url_for('members') }}">Anggota</a>
+                {% if session.get('user') %}
+                <a class="nav-link" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+                {% endif %}
             </div>
         </div>
     </nav>
@@ -98,7 +108,7 @@
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="text-primary">Data Anggota</h2>
-            <a href="{{ url_for('add_member') }}" class="btn btn-tambah">
+            <a href="{{ url_for('upload') }}" class="btn btn-tambah">
                 <i class="fas fa-plus me-2"></i>Tambah
             </a>
         </div>
@@ -136,7 +146,7 @@
                             <td>{{ member['ID'] }}</td>
                             <td>{{ member['Nama'] }}</td>
                             <td>{{ member.get('Divisi', '-') }}</td>
-                            <td>
+                            <!-- <td>
                                 {% if member['Path Wajah'] and member['Path Wajah'] != '' %}
                                     <img src="{{ url_for('static', filename='placeholder.jpg') }}" 
                                          alt="Foto" class="foto-anggota"
@@ -145,6 +155,21 @@
                                 {% else %}
                                     <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjI1IiBjeT0iMjAiIHI9IjgiIGZpbGw9IiNEMUQzRTIiLz4KPHBhdGggZD0iTTEwIDQ1QzEwIDM1LjMzNSAxNi4zMzUgMjcuNSAyNSAyNy41QzMzLjY2NSAyNy41IDQwIDM1LjMzNSA0MCA0NUgxMFoiIGZpbGw9IiNEMUQzRTIiLz4KPC9zdmc+Cg=="
                                          alt="No Photo" class="foto-anggota" title="Belum ada foto">
+                                {% endif %}
+                            </td> -->
+                            <td>
+                                {% if member['Path Wajah'] and member['Path Wajah'] != '' %}
+                                    {% set photo_filename = member['Path Wajah'].replace('data/wajah/', '') %}
+                                    <img src="{{ url_for('get_photo', filename=photo_filename) }}" 
+                                         alt="Foto {{ member['Nama'] }}" 
+                                         class="foto-anggota"
+                                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjI1IiBjeT0iMjAiIHI9IjgiIGZpbGw9IiNEMUQzRTIiLz4KPHBhdGggZD0iTTEwIDQ1QzEwIDM1LjMzNSAxNi4zMzUgMjcuNSAyNSAyNy41QzMzLjY2NSAyNy41IDQwIDM1LjMzNSA0MCA0NUgxMFoiIGZpbGw9IiNEMUQzRTIiLz4KPC9zdmc+Cg=='"
+                                         title="Foto {{ member['Nama'] }}">
+                                {% else %}
+                                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjI1IiBjeT0iMjAiIHI9IjgiIGZpbGw9IiNEMUQzRTIiLz4KPHBhdGggZD0iTTEwIDQ1QzEwIDM1LjMzNSAxNi4zMzUgMjcuNSAyNSAyNy41QzMzLjY2NSAyNy41IDQwIDM1LjMzNSA0MCA0NUgxMFoiIGZpbGw9IiNEMUQzRTIiLz4KPC9zdmc+Cg=="
+                                         alt="No Photo" 
+                                         class="foto-anggota" 
+                                         title="Belum ada foto">
                                 {% endif %}
                             </td>
                             <td>
@@ -155,23 +180,30 @@
                                    class="btn btn-edit-custom btn-action" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button type="button" 
+                                <!-- <button type="button" 
                                         class="btn btn-delete-custom btn-action" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#deleteModal{{ member['ID'] }}"
+                                        title="Hapus">
+                                    <i class="fas fa-trash"></i>
+                                </button> -->
+                                <button type="button" 
+                                        class="btn btn-delete-custom btn-action" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModal{{ loop.index }}"
                                         title="Hapus">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
 
-                        <!-- Modal Konfirmasi Hapus -->
-                        <div class="modal fade" id="deleteModal{{ member['ID'] }}" tabindex="-1">
+                        <!-- Modal Konfirmasi Hapus - Gunakan loop.index untuk ID yang valid -->
+                        <div class="modal fade" id="deleteModal{{ loop.index }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ loop.index }}" aria-hidden="true">
                             <div class="modal-dialog">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title">Konfirmasi Hapus</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        <h5 class="modal-title" id="deleteModalLabel{{ loop.index }}">Konfirmasi Hapus</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
                                         <p>Apakah Anda yakin ingin menghapus anggota:</p>
