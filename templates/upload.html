@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RDBI - Tambah Data Anggota</title>
+    <!-- Font Awesome CDN untuk ikon logout -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
     <style>
         * {
             margin: 0;
@@ -13,12 +16,12 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
             min-height: 100vh;
         }
         
         .header {
-            background: linear-gradient(135deg, #4F63D2 0%, #5A67D8 100%);
+            /* background: linear-gradient(135deg, #4F63D2 0%, #5A67D8 100%); */
             color: white;
             padding: 1rem 2rem;
             box-shadow: 0 2px 20px rgba(0,0,0,0.1);
@@ -31,60 +34,8 @@
             max-width: 1200px;
             margin: 0 auto;
         }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(45deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            animation: rotate 20s linear infinite;
-        }
-        
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        .logo-text h1 {
-            font-size: 1.8rem;
-            font-weight: bold;
-            margin-bottom: 0.2rem;
-        }
-        
-        .logo-text p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        
-        .nav {
-            display: flex;
-            gap: 2rem;
-        }
-        
-        .nav a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .nav a:hover {
-            background: rgba(255,255,255,0.2);
-            transform: translateY(-2px);
-        }
+     
+       
         
         .container {
             max-width: 800px;
@@ -140,6 +91,34 @@
             border-color: #4F63D2;
             box-shadow: 0 0 0 3px rgba(79, 99, 210, 0.1);
             transform: translateY(-2px);
+        }
+
+        .form-select {
+            padding: 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #F8FAFC;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234F63D2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #4F63D2;
+            box-shadow: 0 0 0 3px rgba(79, 99, 210, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .form-select option {
+            padding: 10px;
         }
         
         .camera-section {
@@ -280,32 +259,8 @@
     </style>
 </head>
 <body>
-    <!-- HEADER -->
-    <div class="header">
-        <div class="header-content">
-            <div class="logo">
-                <div class="logo-icon">🎯</div>
-                <div class="logo-text">
-                    <h1>RDBI</h1>
-                    <p>Rekayasa Data dan Business Intelligence</p>
-                </div>
-            </div>
-            <nav class="nav">
-                <a href="/">Home</a>
-                <a href="/scan_auto_page">Absensi</a>
-                <a href="#anggota">Anggota</a>
-                {% if username %}
-                <!-- Tombol Logout hanya tampil kalau sudah login -->
-                <li class="logout">
-                    <a href="{{ url_for('logout') }}">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Logout
-                    </a>
-                </li>
-                {% endif %}
-            </nav>
-        </div>
-    </div>
+    <!-- Import Navbar -->
+    {% include 'navbar.html' %}
 
     <!-- FORM -->
     <div class="container">
@@ -325,7 +280,13 @@
                     </div>
                     <div class="form-group">
                         <label for="divisi">Divisi</label>
-                        <input type="text" id="divisi" name="divisi" placeholder="Divisi" required />
+                        <select id="divisi" name="divisi" required class="form-select">
+                            <option value="" disabled selected>Pilih Divisi</option>
+                            <option value="Inti">Inti</option>
+                            <option value="Pengabdian dan Pelatihan">Pengabdian dan Pelatihan</option>
+                            <option value="Penelitian dan Pengembangan">Penelitian dan Pengembangan</option>
+                            <option value="Rumah Tangga">Rumah Tangga</option>
+                        </select>
                     </div>
                     <!-- <div class="form-group">
                         <label>Foto Anggota</label>
@@ -372,132 +333,14 @@
                 </div>
 
                 <div class="btn-container">
+                    <a href="/members" class="btn btn-secondary back-link">Kembali</a>
                     <button type="submit" class="btn btn-primary submit-btn">Upload</button>
-                    <a href="/dashboard" class="btn btn-secondary back-link">Kembali ke Home</a>
+                    
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- SCRIPT -->
-    <!-- <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const snap = document.getElementById('snap');
-        const retake = document.getElementById('retake');
-        const webcam_image = document.getElementById('webcam_image');
-        const preview = document.getElementById('preview');
-        const form = document.getElementById('uploadForm');
-        const messages = document.getElementById('messages');
-
-        // Aktifkan kamera
-        let stream = null;
-        navigator.mediaDevices?.getUserMedia({ video: true })
-        .then(mediaStream => {
-            video.srcObject = mediaStream;
-            stream = mediaStream;
-            showMessage('Kamera berhasil diaktifkan!', 'success');
-        })
-        .catch(error => {
-            console.error('Kamera tidak dapat diakses:', error);
-            showMessage(`Tidak dapat mengakses kamera: ${error.message}`, 'error');
-        });
-
-
-        // Ambil foto
-        snap.addEventListener('click', function (e) {
-            e.preventDefault();
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataURL = canvas.toDataURL('image/jpeg', 0.95);
-            webcam_image.value = dataURL;
-
-            preview.src = dataURL;
-            preview.style.display = "block";
-            video.style.display = "none";
-            snap.style.display = "none";
-            retake.style.display = "inline-block";
-
-            showMessage('Foto berhasil diambil!', 'success');
-        });
-
-        // Foto ulang
-        retake.addEventListener('click', function (e) {
-            e.preventDefault();
-            preview.style.display = "none";
-            video.style.display = "block";
-            snap.style.display = "inline-block";
-            retake.style.display = "none";
-            webcam_image.value = "";
-        });
-
-        // Kirim data
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const id = document.getElementById('id').value.trim();
-            const name = document.getElementById('name').value.trim();
-            const divisi = document.getElementById('divisi').value.trim();
-            const image = webcam_image.value.trim();
-
-            if (!id || !name || !divisi) {
-                showMessage('Semua field harus diisi!', 'error');
-                return;
-            }
-
-            if (!image) {
-                showMessage('Silakan ambil foto terlebih dahulu!', 'error');
-                return;
-            }
-
-            // Contoh AJAX (gunakan sesuai backend Anda)
-            const formData = {
-                id,
-                name,
-                divisi,
-                webcam_image: image
-            };
-
-            // Kirim ke backend (ganti URL sesuai server Anda)
-            fetch('/upload', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-             .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showMessage('Data anggota berhasil diunggah!', 'success');
-                    form.reset();
-                    preview.style.display = "none";
-                    video.style.display = "block";
-                    snap.style.display = "inline-block";
-                    retake.style.display = "none";
-                    webcam_image.value = "";
-                } else {
-                    showMessage(data.message || 'Gagal mengunggah data.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Kesalahan saat mengirim data:', error);
-                showMessage('Terjadi kesalahan saat mengirim data.', 'error');
-            });
-        });
-
-        // Fungsi menampilkan pesan sukses/gagal
-        function showMessage(message, type) {
-            messages.innerHTML = `
-                <div class="${type === 'success' ? 'success-message' : 'error-message'}">
-                    ${message}
-                </div>
-            `;
-
-            setTimeout(() => {
-                messages.innerHTML = '';
-            }, 4000);
-        }
-    </script> -->
 
     <script>
         const video = document.getElementById('video');
@@ -785,9 +628,9 @@
             `;
 
             if (type !== 'info') {
-                setTimeout(() => {
-                    messages.innerHTML = '';
-                }, 4000);
+                // setTimeout(() => {
+                //     messages.innerHTML = '';
+                // }, 4000);
             }
         }
 

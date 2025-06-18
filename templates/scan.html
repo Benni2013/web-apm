@@ -18,117 +18,32 @@
         color: #333;
       }
 
-      /* Navbar */
-      .navbar {
-        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-        padding: 0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      .nav-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        padding: 0 20px;
-      }
-
-      .logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 15px 0;
-        margin-right: 50px;
-      }
-
-      .logo-icon {
-        width: 40px;
-        height: 40px;
-        background: white;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 4px; /* Memberikan sedikit padding untuk logo */
+        /* Main Content */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
         }
 
-      .logo-text {
-        color: white;
-      }
-
-      .logo-title {
-        font-size: 20px;
-        font-weight: 700;
-        margin: 0;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      }
-
-      .logo-subtitle {
-        font-size: 11px;
-        opacity: 0.9;
-        margin: 0;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      }
-
-      .logo-image {
-        width: 32px;
-        height: 32px;
-        object-fit: contain; /* Menjaga proporsi gambar */
-        border-radius: 4px;
+        .layout-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
         }
-
-        .logo-icon-transparent {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo-image-transparent {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-}
-      .nav-menu {
-        display: flex;
-        list-style: none;
-        gap: 0;
-      }
-
-      .nav-menu li a {
-        display: block;
-        color: white;
-        text-decoration: none;
-        padding: 20px 25px;
-        font-size: 16px;
-        font-weight: 500;
-        transition: background-color 0.2s;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      }
-
-      .nav-menu li a:hover,
-      .nav-menu li a.active {
-        background-color: rgba(255, 255, 255, 0.1);
-      }
-
-      /* Main Content */
-      .main-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 30px 20px;
-      }
         
+        /* Update scan-container untuk layout flex */
         .scan-container {
-            background:white;
-            border-radius:20px;
-            padding:40px;
-            box-shadow:0 20px 40px rgba(0,0,0,0.1);
-            text-align:center;
-            max-width:600px;
-            width:100%;
-            margin:40px auto;      /* ← ini supaya selalu terpusat */
-            }
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            flex: 1;
+            min-width: 500px;
+        }
         
         .scan-header {
             margin-bottom: 30px;
@@ -225,13 +140,17 @@
             to { transform: rotate(360deg); }
         }
         
+        /* Update scan-info untuk layout flex */
         .scan-info {
             background: #e3f2fd;
             border-left: 4px solid #2196F3;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
+            padding: 20px;
+            border-radius: 15px;
             text-align: left;
+            flex: 0 0 300px; /* Fixed width untuk info panel */
+            align-self: flex-start;
+            position: sticky;
+            top: 20px;
         }
         
         .scan-info h4 {
@@ -267,10 +186,35 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
-        @media (max-width: 768px) {
+        /* Responsive layout untuk mobile */
+        @media (max-width: 1024px) {
+            .layout-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .scan-info {
+                flex: none;
+                order: -1; /* Info di atas pada mobile */
+            }
+            
             .scan-container {
+                min-width: auto;
                 padding: 30px 20px;
-                margin: 10px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .layout-container {
+                padding: 10px;
+            }
+            
+            .scan-container {
+                padding: 20px 15px;
+            }
+            
+            .scan-info {
+                padding: 15px;
             }
             
             .scan-header h1 {
@@ -351,90 +295,52 @@
         .main-content {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 30px 20px;
+            padding: 0px 20px;
         }
-        /* Tombol Logout Profesional */
-        .nav-menu li.logout {
-          margin-left: auto;            /* Dorong tombol ke ujung kanan navbar */
-        }
-        .nav-menu li.logout a {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          border: 1px solid white;
-          border-radius: 20px;
-          padding: 8px 16px;
-          background: rgba(255,255,255,0.2);
-          color: white;
-          font-weight: 600;
-          transition: background 0.2s, color 0.2s;
-        }
-        .nav-menu li.logout a:hover {
-          background: white;
-          color: #357abd;
-        }
+
     </style>
 </head>
 <body>
-      <nav class="navbar">
-    <div class="nav-container">
-      <div class="logo">
-        <div class="logo-icon">
-          <img src="{{ url_for('static', filename='images/rdbi.png') }}" alt="RDBI Logo" class="logo-image" />
-        </div>
-        <div class="logo-text">
-          <h1 class="logo-title">RDBI</h1>
-          <p class="logo-subtitle">Relational Data dan Business Intelligence</p>
-        </div>
-      </div>
-      <ul class="nav-menu">
-        <li><a href="{{ url_for('dashboard') }}">Home</a></li>
-        <li><a href="{{ url_for('scan_auto_page') }}" class="active">Absensi</a></li>
-        <li><a href="{{ url_for('members') }}">Anggota</a></li>
-        {% if username %}
-        <li class="logout">
-          <a href="{{ url_for('logout') }}">
-            <i class="fas fa-sign-out-alt"></i> Logout
-          </a>
-        </li>
-        {% endif %}
-      </ul>
-    </div>
-  </nav>
-  <div class="main-content">
-    <div class="scan-container">
-        <div class="scan-header">
-            <h1><i class="fas fa-camera"></i> Scan Wajah untuk Absensi</h1>
-            <p>Posisikan wajah Anda di depan kamera</p>
-        </div>
-        
-        <div class="camera-section" style="position: relative;">
-            <!-- video dan canvas tetap ada -->
-            <video id="video" width="400" height="300" autoplay></video>
-            <canvas id="canvas" width="400" height="300"></canvas>
-            <!-- inilah overlay oval-nya -->
-            <div class="crop-overlay"></div>
-        </div>
+      {% include 'navbar.html' %}
 
-        
-        <div class="status-section">
-            <div id="status" class="status-indicator status-scanning">
-                <div class="loading-animation"></div>
-                <span>Memulai kamera...</span>
+  <div class="main-content">
+        <div class="layout-container">
+            <!-- Scan Info di sebelah kiri -->
+            <div class="scan-info">
+                <h4><i class="fas fa-info-circle"></i> Petunjuk Penggunaan:</h4>
+                <ul>
+                    <li>Pastikan wajah Anda terlihat jelas di kamera</li>
+                    <li>Posisikan wajah di tengah frame kamera</li>
+                    <li>Hindari cahaya yang terlalu terang atau gelap</li>
+                    <li>Sistem akan mendeteksi wajah secara otomatis</li>
+                </ul>
+            </div>
+            
+            <!-- Scan Container di sebelah kanan -->
+            <div class="scan-container">
+                <div class="scan-header">
+                    <h1><i class="fas fa-camera"></i> Scan Wajah untuk Absensi</h1>
+                    <p>Posisikan wajah Anda di depan kamera</p>
+                </div>
+                
+                <div class="camera-section" style="position: relative;">
+                    <!-- video dan canvas tetap ada -->
+                    <video id="video" width="400" height="300" autoplay></video>
+                    <canvas id="canvas" width="400" height="300"></canvas>
+                    <!-- inilah overlay oval-nya -->
+                    <div class="crop-overlay"></div>
+                </div>
+
+                <div class="status-section">
+                    <div id="status" class="status-indicator status-scanning">
+                        <div class="loading-animation"></div>
+                        <span>Memulai kamera...</span>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="scan-info">
-            <h4><i class="fas fa-info-circle"></i> Petunjuk Penggunaan:</h4>
-            <ul>
-                <li>Pastikan wajah Anda terlihat jelas di kamera</li>
-                <li>Posisikan wajah di tengah frame kamera</li>
-                <li>Hindari cahaya yang terlalu terang atau gelap</li>
-                <li>Sistem akan mendeteksi wajah secara otomatis setiap 2 detik</li>
-            </ul>
-        </div>
     </div>
-  </div>  
+
     <!-- Success Modal -->
     <div id="successModal" class="modal">
         <div class="modal-content">

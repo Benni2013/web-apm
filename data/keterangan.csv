@@ -1,8 +1,10 @@
-ID,Nama,Path Wajah
-1,dani,data/wajah/1_dani\20250522043959.jpg
-2,Muhammad Dani Noar,data/wajah/2_Muhammad Dani Noar\20250522051245.jpg
-RDBI.I.01,Benni,data/wajah/RDBI.I.01_Benni\20250522074232.jpg
-3,Vio,data/wajah/3_Vio\20250522124542.jpg
-4,ina,data/wajah/4_ina\20250522124801.jpg
-5,ruchil,data/wajah/5_ruchil\20250522124946.jpg
-6,cia,data/wajah/6_cia\20250522161447.jpg
+ID,Nama,Path Wajah,Divisi
+1,dani,data/wajah/1_dani\20250522043959.jpg,
+2,Muhammad Dani Noar,data/wajah/2_Muhammad Dani Noar\20250522051245.jpg,
+RDBI.I.01,Benni,data/wajah/RDBI.I.01_Benni\20250522074232.jpg,
+3,Vio,data/wajah/3_Vio\20250522124542.jpg,
+4,ina,data/wajah/4_ina\20250522124801.jpg,
+5,ruchil,data/wajah/5_ruchil\20250522124946.jpg,
+6,cia,data/wajah/6_cia\20250522161447.jpg,
+LBI001,Vioni Wijaya Putri,,RTK
+00003,XL,,Pengmas

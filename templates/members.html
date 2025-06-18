@@ -8,179 +8,362 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         /* ===== Navbar ===== */
-        .navbar {
-        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-        padding: 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .nav-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        padding: 0 20px;
-        }
-        .logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 15px 0;
-        margin-right: 50px;
-        }
-        .logo-icon {
-        width: 40px; height: 40px;
-        background: white;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 4px;
-        }
-        .logo-image {
-        width: 32px; height: 32px;
-        object-fit: contain;
-        border-radius: 4px;
-        }
-        .logo-text .logo-title {
-        color: white;
-        font-size: 20px;
-        font-weight: 700;
-        margin: 0;
-        }
-        .logo-text .logo-subtitle {
-        color: white;
-        font-size: 11px;
-        opacity: 0.9;
-        margin: 0;
-        }
-        .nav-menu {
-        display: flex;
-        list-style: none;
-        margin-left: auto;
-        }
-        .nav-menu li a {
-        display: block;
-        color: white;
-        text-decoration: none;
-        padding: 20px 25px;
-        font-size: 16px;
-        font-weight: 500;
-        transition: background-color 0.2s;
-        }
-        .nav-menu li a:hover,
-        .nav-menu li a.active {
-        background-color: rgba(255,255,255,0.1);
-        }
-        /* Tombol Logout */
-        .nav-menu li.logout a {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border: 1px solid white;
-        border-radius: 20px;
-        padding: 8px 16px;
-        background: rgba(255,255,255,0.2);
-        color: white;
-        font-weight: 600;
-        transition: background 0.2s, color 0.2s;
-        }
-        .nav-menu li.logout a:hover {
-        background: white;
-        color: #357abd;
-        }
+.navbar {
+    background: linear-gradient(to right, #4a90e2 0%, #357abd);
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    height: 64px;
+    display: flex;
+    align-items: center;
+}
+
+.nav-container {
+    max-width: 1300px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-icon {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+}
+
+.logo-image {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+.logo-text .logo-title {
+    color: white;
+    font-weight: 700;
+    font-size: 20px;
+    margin: 0;
+}
+
+.logo-text .logo-subtitle {
+    color: white;
+    font-size: 11px;
+    margin: 0;
+    opacity: 0.85;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 6px;
+}
+
+.nav-menu li a {
+    color: white;
+    text-decoration: none;
+    padding: 12px 20px;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.nav-menu li a.active,
+.nav-menu li a:hover {
+    background-color: rgba(255,255,255,0.25);
+}
+
+.nav-menu li.logout a {
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 16px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.nav-menu li.logout a:hover {
+    background-color: white;
+    color: #357abd;
+}
 
         .btn-tambah {
-            background: #4e73df;
+            background: linear-gradient(135deg, #4a90e2);
             border: none;
             color: white;
-            border-radius: 8px;
-            padding: 10px 20px;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            /* box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); */
+            /* transition: all 0.3s ease; */
         }
+        
         .btn-tambah:hover {
-            background: #224abe;
+            /* transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6); */
             color: white;
         }
+
+        /* Enhanced Table Styles */
         .table-container {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.05);
         }
+
+        .table {
+            margin: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table thead th {
+            background: linear-gradient(135deg, #96d7ff );
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 20px 10px;
+            border-color: black;
+            position: relative;
+        }
+
+        .table thead th:first-child {
+            border-top-left-radius: 0;
+        }
+
+        .table thead th:last-child {
+            border-top-right-radius: 0;
+        }
+
+        .table tbody tr {
+            /* transition: all 0.3s ease; */
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        /* .table tbody tr:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            transform: scale(1.01);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        } */
+
+        .table tbody td {
+            padding: 5px 10px;
+            vertical-align: middle;
+            
+            font-weight: 500;
+        }
+
+        .table tbody td:first-child {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+
+        .id-anggota {
+            /* background: linear-gradient(135deg, #3befff 0%); */
+            color: black;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .nama-anggota {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 1.05rem;
+        }
+
+        .divisi-badge {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         .foto-anggota {
-            width: 50px;
-            height: 50px;
-            border-radius: 8px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
             object-fit: cover;
+            border: 4px solid white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
         }
+
+        .foto-anggota:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
         .btn-action {
-            width: 35px;
-            height: 35px;
-            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            margin: 0 2px;
-        }
-        .btn-info-custom {
-            background: #36b9cc;
+            margin: 0 4px;
+            transition: all 0.3s ease;
             border: none;
-            color: white;
+            font-size: 16px;
         }
+
+        
+
         .btn-edit-custom {
-            background: #f6c23e;
-            border: none;
-            color: white;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #8b4513;
         }
+
+        .btn-edit-custom:hover {
+            background: linear-gradient(135deg, #fcb69f 0%, #ffecd2 100%);
+            color: #8b4513;
+        }
+
         .btn-delete-custom {
-            background: #e74a3b;
-            border: none;
-            color: white;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #dc3545;
         }
+
+        .btn-delete-custom:hover {
+            background: linear-gradient(135deg, #fecfef 0%, #ff9a9e 100%);
+            color: #dc3545;
+        }
+
         .pagination-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
             margin-top: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: right;
+            align-items: right;
+            gap: 15px;
+        }
+
+        .pagination-container .btn {
+            border-radius: 12px;
+            padding: 8px 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .pagination-container .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .pagination-container span {
+            background: linear-gradient(135deg, #4a90e2 80%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        /* Empty State Enhancement */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        }
+
+        .empty-state i {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Modal Enhancements */
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            border: none;
+        }
+
+        .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+        .modal-footer .btn {
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: 600;
+        }
+
+        /* Responsive Enhancements */
+        @media (max-width: 768px) {
+            .table-container {
+                margin: 0 -15px;
+                border-radius: 0;
+            }
+            
+            .table {
+                font-size: 0.85rem;
+            }
+            
+            .foto-anggota {
+                width: 45px;
+                height: 45px;
+            }
+            
+            .btn-action {
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
-<body style="background-color: #f8f9fc;">
+<body style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh;">
     <!-- Navbar -->
-        <nav class="navbar">
-    <div class="nav-container">
-        <div class="logo">
-        <div class="logo-icon">
-            <img src="{{ url_for('static', filename='images/rdbi.png') }}"
-                alt="RDBI Logo" class="logo-image">
-        </div>
-        <div class="logo-text">
-            <h1 class="logo-title">RDBI</h1>
-            <p class="logo-subtitle">Relational Data dan Business Intelligence</p>
-        </div>
-        </div>
-        <ul class="nav-menu">
-        <li><a href="{{ url_for('dashboard') }}" >Home</a></li>
-        <li><a href="{{ url_for('scan_auto_page') }}">Absensi</a></li>
-        <li><a href="{{ url_for('members') }}" class="active">Anggota</a></li>
-        {% if username %}
-        <li class="logout">
-            <a href="{{ url_for('logout') }}">
-            <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
-        </li>
-        {% endif %}
-        </ul>
-    </div>
-    </nav>
-
+    {% include 'navbar.html' %}
 
     <div class="container mt-4">
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-primary">Data Anggota</h2>
+            <h2 style="color: #2d3748; font-weight: 700; font-size: 2rem;">
+                <i class="fas fa-users me-3" style="color: #667eea;"></i>Data Anggota
+            </h2>
             <a href="{{ url_for('upload') }}" class="btn btn-tambah">
-                <i class="fas fa-plus me-2"></i>Tambah
+                <i class="fas fa-plus me-2"></i>Tambah Anggota
             </a>
         </div>
 
@@ -188,7 +371,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert" style="border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -200,52 +383,49 @@
         <div class="table-container">
             {% if members %}
                 <table class="table table-hover mb-0">
-                    <thead style="background-color: #f8f9fc;">
+                    <thead >
                         <tr>
-                            <th style="width: 60px;">No</th>
-                            <th style="width: 120px;">ID Anggota</th>
-                            <th>Nama</th>
-                            <th style="width: 150px;">Divisi</th>
-                            <th style="width: 80px;">Foto</th>
-                            <th style="width: 150px;">Aksi</th>
+                            <th style="width: 60px; padding-left: 1.5rem;">No</th>
+                            <th style="width: 140px;"><i class="fas fa-id-card me-2"></i>ID Anggota</th>
+                            <th style="width: 350px;"><i class="fas fa-user me-2"></i>Nama</th>
+                            <th style="width: 150px;"><i class="fas fa-building me-2"></i>Divisi</th>
+                            <th style="width: 100px;"><i class="fas fa-camera me-2"></i>Foto</th>
+                            <th style="width: 150px;"><i class="fas fa-cogs me-2"></i>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for member in members %}
                         <tr>
-                            <td>{{ loop.index }}</td>
-                            <td>{{ member.id_anggota }}</td>
-                            <td>{{ member.nama }}</td>
-                            <td>{{ member.divisi }}</td>
-                            <!-- misal ini kolom Path Wajah -->
+                            <td style="padding-left: 0rem; text-align: center;">{{ loop.index }}</td>
                             <td>
-                            {% if member.path_rel %}
-                                <img src="{{ url_for('wajah', filename=member.path_rel) }}"
-                                    alt="Foto {{ member.nama }}"
-                                    class="foto-anggota">
-                            {% else %}
-                                <img src="{{ url_for('static', filename='images/rdbi.png') }}"
-                                    alt="No Photo" class="foto-anggota">
-                            {% endif %}
+                                <span class="id-anggota">{{ member.id_anggota }}</span>
                             </td>
-
+                            <td>
+                                <span class="nama-anggota">{{ member.nama }}</span>
+                            </td>
+                            <td>
+                                <span class="divisi-badge">{{ member.divisi }}</span>
+                            </td>
+                            <td>
+                                {% if member.path_rel %}
+                                    <img src="{{ url_for('wajah', filename=member.path_rel) }}"
+                                        alt="Foto {{ member.nama }}"
+                                        class="foto-anggota">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='images/rdbi.png') }}"
+                                        alt="No Photo" class="foto-anggota">
+                                {% endif %}
+                            </td>
                             <td>
                                 <a href="{{ url_for('edit_member', member_id=member.id_anggota) }}"
-                                   class="btn btn-edit-custom btn-action" title="Edit">
+                                   class="btn btn-edit-custom btn-action" title="Edit Anggota">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <button type="button"
                                         class="btn btn-delete-custom btn-action"
                                         data-bs-toggle="modal"
                                         data-bs-target="#deleteModal{{ member.id_anggota|replace('.', '-') }}"
-                                        title="Hapus">
-                                    <i class="fas fa-trash"></i>
-                                </button> -->
-                                <button type="button" 
-                                        class="btn btn-delete-custom btn-action" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#deleteModal{{ loop.index }}"
-                                        title="Hapus">
+                                        title="Hapus Anggota">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -253,68 +433,94 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <!-- (Opsional) Pagination jika diperlukan -->
-                <div class="pagination-container p-3 d-flex justify-content-center align-items-center gap-3">
-                <!-- Previous Button -->
-                {% if pagination.has_prev %}
-                    <a href="{{ url_for('members', page=pagination.prev_num) }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-chevron-left"></i> Previous
-                    </a>
-                {% else %}
-                    <button class="btn btn-outline-secondary btn-sm" disabled>
-                    <i class="fas fa-chevron-left"></i> Previous
-                    </button>
-                {% endif %}
+                
+                <!-- Pagination -->
+                <div class="pagination-container">
+                    <!-- Previous Button -->
+                    {% if pagination.has_prev %}
+                        <a href="{{ url_for('members', page=pagination.prev_num) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-chevron-left me-2"></i>Previous
+                        </a>
+                    {% else %}
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="fas fa-chevron-left me-2"></i>Previous
+                        </button>
+                    {% endif %}
 
-                <!-- Current Page / Total Pages -->
-                <span>{{ pagination.page }} dari {{ pagination.pages }}</span>
+                    <!-- Current Page / Total Pages -->
+                    <span>{{ pagination.page }} dari {{ pagination.pages }}</span>
 
-                <!-- Next Button -->
-                {% if pagination.has_next %}
-                    <a href="{{ url_for('members', page=pagination.next_num) }}" class="btn btn-outline-secondary btn-sm">
-                    Next <i class="fas fa-chevron-right"></i>
-                    </a>
-                {% else %}
-                    <button class="btn btn-outline-secondary btn-sm" disabled>
-                    Next <i class="fas fa-chevron-right"></i>
-                    </button>
-                {% endif %}
+                    <!-- Next Button -->
+                    {% if pagination.has_next %}
+                        <a href="{{ url_for('members', page=pagination.next_num) }}" class="btn btn-outline-primary">
+                            Next<i class="fas fa-chevron-right ms-2"></i>
+                        </a>
+                    {% else %}
+                        <button class="btn btn-outline-secondary" disabled>
+                            Next<i class="fas fa-chevron-right ms-2"></i>
+                        </button>
+                    {% endif %}
                 </div>
 
+                <!-- Delete Modals -->
                 {% for member in members %}
                 <div class="modal fade" id="deleteModal{{ member.id_anggota|replace('.', '-') }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ member.id_anggota|replace('.', '-') }}" aria-hidden="true">
-                    <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                        <h5 class="modal-title" id="deleteModalLabel{{ member.id_anggota }}">Konfirmasi Hapus</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteModalLabel{{ member.id_anggota }}">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Konfirmasi Hapus
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="text-center mb-3">
+                                    {% if member.path_rel %}
+                                        <img src="{{ url_for('wajah', filename=member.path_rel) }}"
+                                            alt="Foto {{ member.nama }}"
+                                            class="foto-anggota mb-3">
+                                    {% endif %}
+                                </div>
+                                <p class="text-center">Apakah Anda yakin ingin menghapus anggota:</p>
+                                <div class="text-center">
+                                    <strong class="nama-anggota">{{ member.nama }}</strong><br>
+                                    <span class="id-anggota mt-2">{{ member.id_anggota }}</span>
+                                </div>
+                                <div class="alert alert-danger mt-3" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Peringatan!</strong> Data dan foto akan dihapus permanen dan tidak dapat dikembalikan.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <form method="POST" action="{{ url_for('delete_member', member_id=member.id_anggota) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-trash me-2"></i>Hapus Permanen
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times me-2"></i>Batal
+                                </button>
+                                
+                            </div>
                         </div>
-                        <div class="modal-body">
-                        Apakah Anda yakin ingin menghapus anggota: <strong>{{ member.nama }} (ID: {{ member.id_anggota }})</strong>?
-                        <p class="text-danger mt-2"><i class="fas fa-exclamation-triangle me-1"></i>Data dan foto akan dihapus permanen!</p>
-                        </div>
-                        <div class="modal-footer">
-                        <form method="POST" action="{{ url_for('delete_member', member_id=member.id_anggota) }}">
-                            <button type="submit" class="btn btn-danger"><i class="fas fa-trash me-1"></i>Hapus</button>
-                        </form>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        </div>
-                    </div>
                     </div>
                 </div>
                 {% endfor %}    
-                {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">Belum ada anggota terdaftar</h5>
-                    <p class="text-muted">Silakan tambah anggota baru untuk memulai.</p>
-                    <a href="{{ url_for('add_member') }}" class="btn btn-tambah">
-                        <i class="fas fa-plus me-1"></i>Tambah Anggota Pertama
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-users fa-4x mb-4"></i>
+                    <h4 style="color: #2d3748; font-weight: 700;">Belum ada anggota terdaftar</h4>
+                    <p style="color: #718096; font-size: 1.1rem; margin-bottom: 2rem;">
+                        Mulai dengan menambahkan anggota pertama untuk sistem absensi Anda.
+                    </p>
+                    <a href="{{ url_for('upload') }}" class="btn btn-tambah">
+                        <i class="fas fa-plus me-2"></i>Tambah Anggota Pertama
                     </a>
                 </div>
             {% endif %}
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

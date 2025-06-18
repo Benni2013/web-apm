@@ -150,37 +150,6 @@ def extract_face_embedding_with_facenet(img):
     faces = embedder.extract(face_img, threshold=0.95)
     return faces[0]['embedding'] if faces else None
 
-# def save_face_data_and_embedding(id_, name_, divisi, img):
-#     # 1. Simpan file gambar ke disk
-#     folder = os.path.join(IMAGE_FOLDER, f"{id_}_{name_}")
-#     os.makedirs(folder, exist_ok=True)
-#     fn = f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}.jpg"
-#     path = os.path.join(folder, fn)
-#     cv2.imwrite(path, img)
-
-#     # 2. Upsert ke tabel anggota
-#     anggota = Anggota.query.get(id_)
-#     if not anggota:
-#         anggota = Anggota(
-#             id_anggota=id_,
-#             nama=name_,
-#             divisi=divisi,
-#             path_wajah=path
-#         )
-#         db.session.add(anggota)
-#     else:
-#         anggota.nama        = name_
-#         anggota.divisi      = divisi
-#         anggota.path_wajah  = path
-#     db.session.flush()
-
-#     # 3. Extract embedding & simpan ke vektor_wajah
-#     embedding = extract_face_embedding_with_facenet(img)
-#     if embedding is not None:
-#         vw = VektorWajah(id_anggota=id_, vektor=list(map(float, embedding)))
-#         db.session.add(vw)
-
-#     db.session.commit()
 
 def save_face_data_and_embedding(id_, name_, divisi, img):
     # 1. Simpan file gambar ke disk (HANYA 1 FOTO)
@@ -402,31 +371,42 @@ def upload():
     if request.method == 'POST':
         # 1) Parse JSON payload
         data = request.get_json() or {}
-        id_           = data.get('id', '').strip()
-        name_         = data.get('name', '').strip()
+        id_anggota    = data.get('id', '').strip()
+        nama          = data.get('name', '').strip()
         divisi        = data.get('divisi', '').strip()
         webcam_image  = data.get('webcam_image', '')
         face_vectors  = data.get('face_vectors', [])  # Array of base64 images
 
-        # 2) Validasi input
-        if not id_ or not name_ or not divisi:
+        # 2) Validasi input wajib
+        if not id_anggota or not nama or not divisi:
             return jsonify(success=False,
                            message='ID, Nama, dan Divisi harus diisi!')
 
-        # 3) Decode gambar utama dari base64 (untuk foto profil)
-        if webcam_image:
+        # 3) Cek duplikat ID anggota
+        existing = Anggota.query.filter_by(id_anggota=id_anggota).first()
+        if existing:
+            return jsonify(success=False,
+                           message=f'ID anggota "{id_anggota}" sudah terdaftar!')
+
+        # 4) Decode gambar dari Base64
+        if not webcam_image:
+            return jsonify(success=False,
+                           message='Silakan ambil foto sebelum submit!')
+        try:
             header, encoded = webcam_image.split(',', 1)
             img_bytes = base64.b64decode(encoded)
             nparr = np.frombuffer(img_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        else:
+            if img is None:
+                raise ValueError("Decode gagal")
+        except Exception:
             return jsonify(success=False,
-                           message='Silakan ambil foto sebelum submit!')
+                           message='Format gambar tidak valid!')
 
-        # 4) Simpan foto utama dan data anggota
-        save_face_data_and_embedding(id_, name_, divisi, img)
+        # 5) Simpan foto utama dan data anggota
+        save_face_data_and_embedding(id_anggota, nama, divisi, img)
         
-        # 5) Proses dan simpan multiple vectors jika ada
+        # 6) Proses dan simpan multiple vectors jika ada
         if face_vectors and len(face_vectors) > 0:
             vectors_data = []
             for vector_image in face_vectors:
@@ -447,15 +427,17 @@ def upload():
             
             # Simpan semua vectors ke database
             if vectors_data:
-                save_multiple_face_vectors(id_, vectors_data)
+                save_multiple_face_vectors(id_anggota, vectors_data)
                 return jsonify(success=True,
-                               message=f'Anggota {name_} berhasil ditambahkan dengan {len(vectors_data)} vektor wajah!')
+                               message=f'Anggota {nama} berhasil ditambahkan dengan {len(vectors_data)} vektor wajah!')
         
         return jsonify(success=True,
-                       message=f'Anggota {name_} berhasil ditambahkan!')
+                       message=f'Anggota {nama} berhasil ditambahkan!')
 
-    # untuk GET, render halaman upload
-    return render_template('upload.html', username=session.get('user'))
+    # GET: render halaman upload.html
+    return render_template('upload.html',
+                           username=session.get('user'))
+
 
 @app.route('/export_excel')
 @login_required
@@ -553,56 +535,7 @@ def scan_auto():
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
-# def scan_auto():
-#     try:
-#         data_url = request.form['webcam_image']
-#         header, encoded = data_url.split(",", 1)
-#         img_bytes = base64.b64decode(encoded)
-#         nparr = np.frombuffer(img_bytes, np.uint8)
-#         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-#         # Proses seperti biasa
-#         test_embedding = extract_face_embedding_with_facenet(img)
-#         if test_embedding is None:
-#             return jsonify({'success': False, 'message': 'Tidak terdeteksi wajah.'})
-        
-#         df = pd.read_csv(EMBEDDINGS_FILE)
-#         if df.empty or len(df) == 0:
-#             return jsonify({'success': False, 'message': 'Dataset kosong.'})
-        
-#         names = df["Nama"].values
-#         embeddings = df.drop(columns=["Nama"]).values.astype(float)
-#         sims = cosine_similarity([test_embedding], embeddings)
-#         best_idx = np.argmax(sims)
-#         best_score = sims[0][best_idx]
-        
-#         if best_score > 0.7:
-#             # di scan_auto, setelah best_score > threshold
-#             name = names[best_idx]
-#             anggota = Anggota.query.filter_by(nama=name).first()
-#             if not anggota:
-#                 # nama ada di embeddings.csv tapi belum tercatat di anggota DB
-#                 return jsonify({'success': False, 'message': 'Wajah tidak dikenal'})
-#             success, message = save_attendance(anggota.id_anggota)
-#             if success:
-#                 return jsonify({
-#                     'success': True, 
-#                     'message': f'Selamat datang, {name}!',
-#                     'name': name,
-#                     'confidence': f'{best_score:.2f}'
-#                 })
-#             else:
-#                 return jsonify({
-#                     'success': False, 
-#                     'message': message,
-#                     'name': name
-#                 })
-#         else:
-#             return jsonify({'success': False, 'message': 'Wajah tidak dikenal'})
-#     except Exception as e:
-#         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
-
-# Tambahkan route-route ini ke file app.py Anda
 
 @app.route('/members')
 @login_required
@@ -666,33 +599,9 @@ def add_member():
             flash(f'Error menambah anggota: {str(e)}', 'danger')
             return render_template('add_member.html')
     
-    return render_template('add_member.html')
-# def add_member():
-#     """Tambah anggota baru"""
-#     if request.method == 'POST':
-#         id_ = request.form['id'].strip()
-#         name_ = request.form['name'].strip()
-#         divisi = request.form['divisi'].strip()
-        
-#         if not id_ or not name_ or not divisi:
-#             flash('ID, Nama, dan Divisi harus diisi!', 'danger')
-#             return render_template('add_member.html')
-        
-#         # Cek apakah ID sudah ada
-#         df = pd.read_csv(CSV_FILE)
-#         if not df.empty and id_ in df['ID'].astype(str).values:
-#             flash('ID sudah ada! Gunakan ID yang berbeda.', 'danger')
-#             return render_template('add_member.html')
-        
-#         # Tambah anggota dengan kolom Divisi
-#         new_member = pd.DataFrame([{"ID": id_, "Nama": name_, "Divisi": divisi, "Path Wajah": ""}])
-#         df = pd.concat([df, new_member], ignore_index=True)
-#         df.to_csv(CSV_FILE, index=False)
-        
-#         flash(f'Anggota {name_} berhasil ditambahkan!', 'success')
-#         return redirect(url_for('members'))
-    
-#     return render_template('add_member.html')
+    # return render_template('add_member.html')
+    return redirect(url_for('members'))  # Redirect ke halaman anggota jika GET
+
 
 @app.route('/edit_member/<member_id>', methods=['GET', 'POST'])
 @login_required
@@ -733,56 +642,56 @@ def edit_member(member_id):
 @app.route('/delete_member/<member_id>', methods=['POST'])
 @login_required
 def delete_member(member_id):
-    """Hapus anggota beserta seluruh data terkait di database dan filesystem"""
-    # 1. Cari anggota di DB
-    anggota = Anggota.query.get(member_id)
-    if not anggota:
-        flash('Anggota tidak ditemukan!', 'danger')
-        return redirect(url_for('members'))
+    """Hapus anggota dari database (folder foto dibiarkan untuk pembersihan manual)"""
+    try:
+        # 1. Cari anggota di DB
+        anggota = Anggota.query.get(member_id)
+        if not anggota:
+            flash('Anggota tidak ditemukan!', 'danger')
+            return redirect(url_for('members'))
 
-    nama = anggota.nama
-    # 2. Hapus folder foto (jika ada)
-    folder_name = f"{anggota.id_anggota}_{anggota.nama}"
-    folder_path = os.path.join(IMAGE_FOLDER, folder_name)
-    if os.path.exists(folder_path):
-        shutil.rmtree(folder_path)
-
-    # 3. Hapus record Anggota (cascade will remove vektor_wajah & absen_piket)
-    db.session.delete(anggota)
-    db.session.commit()
-
-    flash(f'Anggota {nama} berhasil dihapus!', 'success')
+        nama = anggota.nama
+        
+        # 2. Hapus dari database (CASCADE akan menghapus data terkait)
+        db.session.delete(anggota)
+        db.session.commit()
+        
+        # 3. Coba hapus folder foto (optional - tidak akan error jika gagal)
+        try:
+            folder_name = f"{member_id}_{nama}"
+            folder_path = os.path.join(IMAGE_FOLDER, folder_name)
+            
+            if os.path.exists(folder_path):
+                # Ganti nama folder dengan prefix "_DELETED_" jika tidak bisa dihapus
+                import time
+                timestamp = int(time.time())
+                new_name = f"_DELETED_{timestamp}_{folder_name}"
+                new_path = os.path.join(IMAGE_FOLDER, new_name)
+                
+                try:
+                    shutil.rmtree(folder_path)
+                    folder_msg = " Folder foto juga berhasil dihapus."
+                except:
+                    try:
+                        os.rename(folder_path, new_path)
+                        folder_msg = " Folder foto ditandai untuk penghapusan manual."
+                    except:
+                        folder_msg = " Folder foto tidak dapat dihapus (silakan hapus manual)."
+            else:
+                folder_msg = ""
+                
+        except Exception as folder_error:
+            folder_msg = f" (Folder foto: {str(folder_error)})"
+        
+        flash(f'Anggota {nama} berhasil dihapus dari database!{folder_msg}', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error dalam delete_member: {str(e)}")
+        flash(f'Error menghapus anggota: {str(e)}', 'danger')
+    
     return redirect(url_for('members'))
-# def delete_member(member_id):
-#     """Hapus anggota"""
-#     df = pd.read_csv(CSV_FILE)
-    
-#     if df.empty or member_id not in df['ID'].astype(str).values:
-#         flash('Anggota tidak ditemukan!', 'danger')
-#         return redirect(url_for('members'))
-    
-#     member = df[df['ID'].astype(str) == member_id].iloc[0]
-#     member_name = member['Nama']
-    
-#     # Hapus dari CSV utama
-#     df = df[df['ID'].astype(str) != member_id]
-#     df.to_csv(CSV_FILE, index=False)
-    
-#     # Hapus dari embeddings
-#     if os.path.exists(EMBEDDINGS_FILE):
-#         df_e = pd.read_csv(EMBEDDINGS_FILE)
-#         if not df_e.empty:
-#             df_e = df_e[df_e['Nama'] != member_name]
-#             df_e.to_csv(EMBEDDINGS_FILE, index=False)
-    
-#     # Hapus folder foto jika ada
-#     folder_path = os.path.join(IMAGE_FOLDER, f"{member_id}_{member_name}")
-#     if os.path.exists(folder_path):
-#         import shutil
-#         shutil.rmtree(folder_path)
-    
-#     flash(f'Anggota {member_name} berhasil dihapus!', 'success')
-#     return redirect(url_for('members'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

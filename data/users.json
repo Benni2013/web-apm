@@ -13,5 +13,20 @@
     "id": 3,
     "username": "piopio",
     "password_hash": "scrypt:32768:8:1$0iHyJisQokCDoAhS$a9462333d6126674c00363c1f116401146e445825775cda7b9bc77c50d265009223cafafc060f40e0357f1eb767d2138b832be7e93983a256f0dbc862abbe14f"
+  },
+  {
+    "id": 4,
+    "username": "Pio",
+    "password_hash": "scrypt:32768:8:1$YI4wzHb9rA7eK0X8$f56eae8fd83325d3071fdfee615aa2e70a84a8e600567a7df16026ed62370059fd83f927997198ade2dee85cdac5c6dca77d09c68251528565906f200be31cbd"
+  },
+  {
+    "id": 5,
+    "username": "inaa",
+    "password_hash": "pbkdf2:sha256:600000$emvKrJVO51RZ8qTe$5f02b2c51222d9488d2568be2279336ecbafb8f5962336d1c309f2b53f7806cb"
+  },
+  {
+    "id": 6,
+    "username": "Anastasya",
+    "password_hash": "pbkdf2:sha256:600000$p0d5tQAtXWTQuLcj$b753556da184e55d9fa06e6ca66f8b74609d47b5aeed425e18fd6b39d4d42a2d"
   }
 ]
