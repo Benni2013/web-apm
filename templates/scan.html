@@ -6,31 +6,129 @@
     <title>Scan Wajah - Sistem Absensi Lab</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+      }
+
+      /* Navbar */
+      .navbar {
+        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+        padding: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 15px 0;
+        margin-right: 50px;
+      }
+
+      .logo-icon {
+        width: 40px;
+        height: 40px;
+        background: white;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px; /* Memberikan sedikit padding untuk logo */
         }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+
+      .logo-text {
+        color: white;
+      }
+
+      .logo-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .logo-subtitle {
+        font-size: 11px;
+        opacity: 0.9;
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .logo-image {
+        width: 32px;
+        height: 32px;
+        object-fit: contain; /* Menjaga proporsi gambar */
+        border-radius: 4px;
         }
+
+        .logo-icon-transparent {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-image-transparent {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+      .nav-menu {
+        display: flex;
+        list-style: none;
+        gap: 0;
+      }
+
+      .nav-menu li a {
+        display: block;
+        color: white;
+        text-decoration: none;
+        padding: 20px 25px;
+        font-size: 16px;
+        font-weight: 500;
+        transition: background-color 0.2s;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .nav-menu li a:hover,
+      .nav-menu li a.active {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Main Content */
+      .main-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 30px 20px;
+      }
         
         .scan-container {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 600px;
-            width: 100%;
-        }
+            background:white;
+            border-radius:20px;
+            padding:40px;
+            box-shadow:0 20px 40px rgba(0,0,0,0.1);
+            text-align:center;
+            max-width:600px;
+            width:100%;
+            margin:40px auto;      /* ← ini supaya selalu terpusat */
+            }
         
         .scan-header {
             margin-bottom: 30px;
@@ -248,9 +346,62 @@
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
+
+              /* Main Content */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        /* Tombol Logout Profesional */
+        .nav-menu li.logout {
+          margin-left: auto;            /* Dorong tombol ke ujung kanan navbar */
+        }
+        .nav-menu li.logout a {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border: 1px solid white;
+          border-radius: 20px;
+          padding: 8px 16px;
+          background: rgba(255,255,255,0.2);
+          color: white;
+          font-weight: 600;
+          transition: background 0.2s, color 0.2s;
+        }
+        .nav-menu li.logout a:hover {
+          background: white;
+          color: #357abd;
+        }
     </style>
 </head>
 <body>
+      <nav class="navbar">
+    <div class="nav-container">
+      <div class="logo">
+        <div class="logo-icon">
+          <img src="{{ url_for('static', filename='images/rdbi.png') }}" alt="RDBI Logo" class="logo-image" />
+        </div>
+        <div class="logo-text">
+          <h1 class="logo-title">RDBI</h1>
+          <p class="logo-subtitle">Relational Data dan Business Intelligence</p>
+        </div>
+      </div>
+      <ul class="nav-menu">
+        <li><a href="{{ url_for('dashboard') }}">Home</a></li>
+        <li><a href="{{ url_for('scan_auto_page') }}" class="active">Absensi</a></li>
+        <li><a href="{{ url_for('members') }}">Anggota</a></li>
+        {% if username %}
+        <li class="logout">
+          <a href="{{ url_for('logout') }}">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </nav>
+  <div class="main-content">
     <div class="scan-container">
         <div class="scan-header">
             <h1><i class="fas fa-camera"></i> Scan Wajah untuk Absensi</h1>
@@ -282,12 +433,8 @@
                 <li>Sistem akan mendeteksi wajah secara otomatis setiap 2 detik</li>
             </ul>
         </div>
-        
-        <a href="{{ url_for('home') }}" class="back-button">
-            <i class="fas fa-arrow-left"></i> Kembali Ke Dashboard
-        </a>
     </div>
-    
+  </div>  
     <!-- Success Modal -->
     <div id="successModal" class="modal">
         <div class="modal-content">

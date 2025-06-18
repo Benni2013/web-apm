@@ -386,8 +386,7 @@
         <ul class="nav-menu">
           <li><a href="{{ url_for('dashboard') }}" class="active">Home</a></li>
           <li><a href="{{ url_for('scan_auto_page') }}">Absensi</a></li>
-          <!-- <li><a href="{{ url_for('upload') }}">Anggota</a></li> -->
-           <li><a href="{{ url_for('members') }}">Anggota</a></li>
+          <li><a href="{{ url_for('members') }}">Anggota</a></li>
           {% if username %}
           <!-- Tombol Logout hanya tampil kalau sudah login -->
           <li class="logout">
