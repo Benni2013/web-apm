@@ -221,7 +221,9 @@ def save_attendance(id_anggota):
     exists = AbsenPiket.query.filter_by(
         id_anggota=id_anggota, tanggal=today).first()
     if exists:
-        return False, "Anda sudah absen hari ini!"
+        # Jika sudah absen hari ini, tampilkan nama anggota di pesan
+        anggota = Anggota.query.get(id_anggota)
+        return False, f"{anggota.nama} sudah absen hari ini!"
     # Simpan
     now = datetime.now().time()
     absen = AbsenPiket(id_anggota=id_anggota, tanggal=today,
